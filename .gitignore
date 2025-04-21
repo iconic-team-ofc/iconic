@@ -1,1 +1,56 @@
+# ✅ GERAL
+.DS_Store
+Thumbs.db
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ✅ AMBIENTES
+.env
+.env.* 
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# ✅ NODE / DIST
+node_modules/
+dist/
+dist-ssr/
+build/
+.cache/
+.next/
+
+# ✅ TYPESCRIPT
+*.tsbuildinfo
+
+# ✅ VSCODE / IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ✅ TESTS / COVERAGE
+coverage/
+.nyc_output/
+
+# ✅ BACKEND
+/backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+
+# ✅ FRONTEND
+/frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+
+# ✅ GIT
+.git/
 .obsidian/
