@@ -1,4 +1,3 @@
-// src/event-checkins/event-checkin.service.ts
 import {
   BadRequestException,
   ConflictException,
@@ -26,7 +25,6 @@ export class EventCheckinService {
     if (!participation)
       throw new ForbiddenException('You are not confirmed for this event');
 
-    // ❌ Se já escaneou, não pode gerar
     const alreadyCheckedIn = await this.prisma.eventCheckin.findFirst({
       where: {
         user_id: userId,
@@ -37,7 +35,6 @@ export class EventCheckinService {
     if (alreadyCheckedIn)
       throw new ConflictException('You have already checked in');
 
-    // ⏱️ Verifica geração recente
     const lastPending = await this.prisma.eventCheckin.findFirst({
       where: {
         user_id: userId,
@@ -56,15 +53,20 @@ export class EventCheckinService {
       }
     }
 
-    return this.prisma.eventCheckin.create({
+    const checkin = await this.prisma.eventCheckin.create({
       data: {
         user_id: userId,
         event_id: eventId,
         qr_token: uuidv4(),
-        scanned_by_admin_id: null, // será preenchido no scan
+        scanned_by_admin_id: null,
         checkin_time: new Date(0),
       },
     });
+
+    return {
+      ...checkin,
+      qr_code_url: `https://api.qrserver.com/v1/create-qr-code/?data=${checkin.qr_token}&size=200x200`,
+    };
   }
 
   async scan(qr_token: string, adminId: string) {
@@ -74,18 +76,16 @@ export class EventCheckinService {
 
     if (!checkin) throw new NotFoundException('QR code not found');
 
-    // ❌ Já escaneado
     if (checkin.checkin_time.getTime() !== new Date(0).getTime()) {
       throw new ConflictException('This QR code has already been used');
     }
 
-    // ⏳ Expirado
     const secondsSinceCreated = differenceInSeconds(
       new Date(),
       checkin.created_at,
     );
     if (secondsSinceCreated > 60) {
-      throw new ForbiddenException('QR code has expired');
+      throw new ForbiddenException('QR code expired');
     }
 
     return this.prisma.eventCheckin.update({
@@ -109,7 +109,6 @@ export class EventCheckinService {
       where: { id: checkinId },
     });
     if (!checkin) throw new NotFoundException('Check-in not found');
-
     return this.prisma.eventCheckin.delete({ where: { id: checkinId } });
   }
 }
