@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  user
+  iconic
+  admin
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  full_name           String
+  email               String   @unique
+  phone_number        String?
+  instagram           String?
+  profile_picture_url String?
+  bio                 String?  @db.Text
+  show_public_profile Boolean  @default(false)
+  is_iconic           Boolean  @default(false)
+  iconic_expires_at   DateTime?
+  role                Role     @default(user)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  // RELAÇÕES NOVAS ⬇️
+  participations      EventParticipation[]
+  checkins            EventCheckin[]                            // check-ins feitos pelo user
+  admin_checkins      EventCheckin[] @relation("AdminCheckin")  // check-ins escaneados por ele como admin
+
+  @@map("User")
+}
+
+
+model Event {
+  id               String   @id @default(uuid())
+  title            String   @db.VarChar(120)
+  description      String
+  location         String   @db.VarChar(200)
+  date             DateTime
+  time             DateTime
+  category         EventCategory
+  is_exclusive     Boolean
+  is_public        Boolean  @default(false)
+  max_attendees    Int
+  partner_name     String?  @db.VarChar(100)
+  partner_logo_url String?
+  cover_image_url  String
+  created_at       DateTime @default(now())
+  participations   EventParticipation[]
+  checkins         EventCheckin[]
+}
+
+model EventParticipation {
+  id           String   @id @default(uuid())
+  user_id      String
+  event_id     String
+  status       ParticipationStatus
+  created_at   DateTime @default(now())
+  cancelled_at DateTime?
+
+  user         User     @relation(fields: [user_id], references: [id])
+  event        Event    @relation(fields: [event_id], references: [id])
+}
+
+model EventCheckin {
+  id                   String   @id @default(uuid())
+  event_id             String
+  user_id              String
+  qr_token             String   @unique @db.VarChar(64)
+  scanned_by_admin_id  String?  // 👈 Tornar opcional com ?
+  checkin_time         DateTime
+  created_at           DateTime @default(now()) 
+
+  event                Event    @relation(fields: [event_id], references: [id])
+  user                 User     @relation(fields: [user_id], references: [id])
+  scanned_by           User?    @relation("AdminCheckin", fields: [scanned_by_admin_id], references: [id]) // 👈 Também aqui
+}
+
+
+enum EventCategory {
+  party
+  drop
+  dinner
+  fashion_show
+  other
+}
+
+enum ParticipationStatus {
+  confirmed
+  cancelled
+}
