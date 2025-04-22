@@ -12,6 +12,7 @@ enum Role {
   user
   iconic
   admin
+  scanner
 }
 
 model User {
@@ -74,7 +75,7 @@ model EventCheckin {
   event_id             String
   user_id              String
   qr_token             String   @unique @db.VarChar(64)
-  scanned_by_admin_id  String?  // 👈 Tornar opcional com ?
+  scanned_by_admin_id  String?  
   checkin_time         DateTime
   created_at           DateTime @default(now()) 
 
