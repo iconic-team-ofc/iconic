@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { loginWithGoogle } from "./firebase";
 import axios from "axios";
-import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
 function App() {
@@ -67,7 +66,9 @@ function App() {
   };
 
   useEffect(() => {
-    if (showScanner && jwt && me?.role === "admin") {
+    const isAllowedToScan = me?.role === "admin" || me?.role === "scanner";
+
+    if (showScanner && jwt && isAllowedToScan) {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(() => {});
       }
@@ -97,13 +98,14 @@ function App() {
         scannerRef.current.clear().catch(() => {});
       }
     };
-  }, [showScanner]);
+  }, [showScanner, jwt, me]);
 
   return (
     <div style={{ padding: 40, fontFamily: "Arial" }}>
       <h1>Check-in App</h1>
 
       {!jwt && <button onClick={handleLogin}>Login com Google</button>}
+
       {jwt && (
         <>
           <button onClick={getProfile}>Ver Perfil</button>
@@ -141,7 +143,7 @@ function App() {
         </div>
       )}
 
-      {me?.role === "admin" && (
+      {(me?.role === "admin" || me?.role === "scanner") && (
         <div style={{ marginTop: 30 }}>
           <button onClick={() => setShowScanner((prev) => !prev)}>
             {showScanner ? "Fechar Scanner" : "Escanear QR Code"}

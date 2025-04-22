@@ -39,19 +39,31 @@ export class EventCheckinController {
     return this.service.generate(userId, dto.event_id);
   }
 
-  @Post('scan')
   @UseGuards(RolesGuard)
-  @Roles(Role.admin)
-  @ApiOperation({ summary: 'Scan QR code and confirm check-in (admin only)' })
+  @Roles(Role.admin, Role.scanner)
+  @Post('scan')
+  @ApiOperation({
+    summary: 'Scan QR code and confirm check-in (admin or scanner)',
+  })
   scan(@Req() req, @Body() dto: AdminCheckinDto) {
-    const adminId = req.user.sub;
-    return this.service.scan(dto.qr_token, adminId);
+    const scannerId = req.user.sub;
+    return this.service.scan(dto.qr_token, scannerId);
   }
 
   @Get('event/:eventId')
   @ApiOperation({ summary: 'List all check-ins for a specific event' })
   findByEvent(@Param('eventId') eventId: string) {
     return this.service.findByEvent(eventId);
+  }
+
+  @Get('event/:eventId/with-scanner')
+  @UseGuards(RolesGuard)
+  @Roles(Role.admin, Role.scanner)
+  @ApiOperation({
+    summary: 'Get checked-in users with scanner info (admin/scanner only)',
+  })
+  findWithScanner(@Param('eventId') eventId: string) {
+    return this.service.findWithScannerInfo(eventId);
   }
 
   @Delete(':checkin_id')

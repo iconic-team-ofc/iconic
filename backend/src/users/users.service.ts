@@ -57,13 +57,31 @@ export class UsersService {
       where: { id },
       data: {
         is_iconic: true,
-        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // +30 dias
+        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 30 dias
+      },
+    });
+  }
+
+  async promoteToScanner(id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        role: Role.scanner,
+      },
+    });
+  }
+
+  async demoteScanner(id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        role: Role.user,
       },
     });
   }
 
   async findIconicUsers() {
-    const users = await this.prisma.user.findMany({
+    return this.prisma.user.findMany({
       where: {
         is_iconic: true,
         iconic_expires_at: {
@@ -71,17 +89,13 @@ export class UsersService {
         },
       },
     });
-
-    return users;
   }
 
   async findPublicUsers() {
-    const users = await this.prisma.user.findMany({
+    return this.prisma.user.findMany({
       where: {
         show_public_profile: true,
       },
     });
-
-    return users;
   }
 }
