@@ -34,14 +34,6 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'User profile returned successfully',
-    schema: {
-      example: {
-        id: 'uuid',
-        full_name: 'John Doe',
-        email: 'john@example.com',
-        role: 'user',
-      },
-    },
   })
   async getMe(@Req() req) {
     const userId = req.user?.sub;
@@ -55,6 +47,24 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User promoted to ICONIC' })
   promoteToIconic(@Param('id') id: string) {
     return this.usersService.promoteToIconic(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.admin)
+  @Post('scanner/:id')
+  @ApiOperation({ summary: 'Promote a user to SCANNER (admin only)' })
+  @ApiResponse({ status: 200, description: 'User promoted to SCANNER' })
+  promoteToScanner(@Param('id') id: string) {
+    return this.usersService.promoteToScanner(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.admin)
+  @Post('scanner/:id/remove')
+  @ApiOperation({ summary: 'Remove SCANNER role from a user (admin only)' })
+  @ApiResponse({ status: 200, description: 'SCANNER role removed from user' })
+  demoteScanner(@Param('id') id: string) {
+    return this.usersService.demoteScanner(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -100,18 +110,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User returned by ID',
-    schema: {
-      example: {
-        id: 'uuid',
-        full_name: 'John Doe',
-        email: 'john@example.com',
-        role: 'user',
-      },
-    },
-  })
+  @ApiResponse({ status: 200, description: 'User returned by ID' })
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
   }

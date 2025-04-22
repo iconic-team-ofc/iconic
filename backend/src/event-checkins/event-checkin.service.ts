@@ -69,7 +69,7 @@ export class EventCheckinService {
     };
   }
 
-  async scan(qr_token: string, adminId: string) {
+  async scan(qr_token: string, scannerId: string) {
     const checkin = await this.prisma.eventCheckin.findUnique({
       where: { qr_token },
     });
@@ -92,7 +92,7 @@ export class EventCheckinService {
       where: { id: checkin.id },
       data: {
         checkin_time: new Date(),
-        scanned_by_admin_id: adminId,
+        scanned_by_admin_id: scannerId,
       },
     });
   }
@@ -101,6 +101,21 @@ export class EventCheckinService {
     return this.prisma.eventCheckin.findMany({
       where: { event_id: eventId },
       include: { user: true, scanned_by: true },
+    });
+  }
+
+  async findWithScannerInfo(eventId: string) {
+    return this.prisma.eventCheckin.findMany({
+      where: {
+        event_id: eventId,
+        checkin_time: {
+          not: new Date(0),
+        },
+      },
+      include: {
+        user: true,
+        scanned_by: true,
+      },
     });
   }
 
