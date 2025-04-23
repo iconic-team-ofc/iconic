@@ -2,9 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { Role } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class UsersService {
+  private supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   constructor(private prisma: PrismaService) {}
 
   async findOrCreate(data: {
@@ -26,6 +32,7 @@ export class UsersService {
           profile_picture_url,
           phone_number,
           role: Role.user,
+          nickname: email.split('@')[0],
         },
       });
     }
@@ -51,6 +58,37 @@ export class UsersService {
   async remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
   }
+
+  async removeWithPhotos(id: string) {
+    const photos = await this.prisma.userPhoto.findMany({
+      where: { user_id: id },
+    });
+  
+    const paths = photos.map((p) => `${id}/${p.url.split('/').pop()}`);
+  
+    if (paths.length > 0) {
+      const { error } = await this.supabase.storage
+        .from('user-photos')
+        .remove(paths);
+  
+      if (error) {
+        console.error('Erro ao deletar fotos do Supabase:', error);
+        throw error;
+      }
+    }
+  
+    // 🧹 Remove do banco: fotos do usuário
+    await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
+  
+    // 🧹 Remove participações do usuário em eventos
+    await this.prisma.eventParticipation.deleteMany({
+      where: { user_id: id },
+    });
+  
+    // 🧹 Remove o próprio usuário
+    return this.prisma.user.delete({ where: { id } });
+  }
+  
 
   async promoteToIconic(id: string) {
     return this.prisma.user.update({
