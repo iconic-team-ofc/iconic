@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { EventsModule } from './events/events.module';
 import { EventParticipationModule } from './event-participations/event-participation.module';
 import { EventCheckinModule } from './event-checkins/event-checkin.module';
+import { UserPhotosModule } from './user-photos/user-photo.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { EventCheckinModule } from './event-checkins/event-checkin.module';
     UsersModule,
     EventsModule,
     EventParticipationModule,
-    EventCheckinModule, 
+    EventCheckinModule,
+    UserPhotosModule,
   ],
 })
 export class AppModule {}

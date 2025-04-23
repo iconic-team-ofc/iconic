@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   Req,
+  HttpCode,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -94,17 +96,34 @@ export class UsersController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update user profile (self or admin)' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  update(@Req() req, @Param('id') id: string, @Body() dto: UpdateUserDto) {
+    const requesterId = req.user.sub;
+    const isAdmin = req.user.role === Role.admin;
+
+    if (requesterId !== id && !isAdmin) {
+      throw new ForbiddenException('Not authorized to update this user');
+    }
+
     return this.usersService.update(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.admin)
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete user (admin only)' })
-  @ApiResponse({ status: 204, description: 'User deleted successfully' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete user and storage (self or admin)' })
+  @ApiResponse({
+    status: 204,
+    description: 'User and photos deleted successfully',
+  })
+  async remove(@Req() req, @Param('id') id: string) {
+    const requesterId = req.user.sub;
+    const isAdmin = req.user.role === Role.admin;
+
+    if (requesterId !== id && !isAdmin) {
+      throw new ForbiddenException('Not authorized to delete this user');
+    }
+
+    return this.usersService.removeWithPhotos(id);
   }
 
   @UseGuards(JwtAuthGuard)
