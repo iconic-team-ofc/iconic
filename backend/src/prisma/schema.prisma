@@ -16,28 +16,41 @@ enum Role {
 }
 
 model User {
-  id                  String   @id @default(uuid())
+  id                  String       @id @default(uuid())
   full_name           String
-  email               String   @unique
+  email               String       @unique
   phone_number        String?
   instagram           String?
+  nickname            String       @unique @db.VarChar(30)
   profile_picture_url String?
-  bio                 String?  @db.Text
-  show_public_profile Boolean  @default(false)
-  is_iconic           Boolean  @default(false)
+  bio                 String?      @db.Text
+  show_public_profile Boolean      @default(false)
+  is_iconic           Boolean      @default(false)
   iconic_expires_at   DateTime?
-  role                Role     @default(user)
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  role                Role         @default(user)
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
 
-  // RELAÇÕES NOVAS ⬇️
   participations      EventParticipation[]
-  checkins            EventCheckin[]                            // check-ins feitos pelo user
-  admin_checkins      EventCheckin[] @relation("AdminCheckin")  // check-ins escaneados por ele como admin
+  checkins            EventCheckin[]
+  admin_checkins      EventCheckin[] @relation("AdminCheckin")
+  photos              UserPhoto[]
 
   @@map("User")
 }
 
+model UserPhoto {
+  id         String   @id @default(uuid())
+  user_id    String
+  url        String   @db.VarChar(2048)
+  position   Int
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, url])        // Evita duplicação de URLs por usuário
+  @@unique([user_id, position])   // Garante posição única de 1 a 6
+}
 
 model Event {
   id               String   @id @default(uuid())
@@ -75,15 +88,14 @@ model EventCheckin {
   event_id             String
   user_id              String
   qr_token             String   @unique @db.VarChar(64)
-  scanned_by_admin_id  String?  
+  scanned_by_admin_id  String?
   checkin_time         DateTime
-  created_at           DateTime @default(now()) 
+  created_at           DateTime @default(now())
 
   event                Event    @relation(fields: [event_id], references: [id])
   user                 User     @relation(fields: [user_id], references: [id])
-  scanned_by           User?    @relation("AdminCheckin", fields: [scanned_by_admin_id], references: [id]) // 👈 Também aqui
+  scanned_by           User?    @relation("AdminCheckin", fields: [scanned_by_admin_id], references: [id])
 }
-
 
 enum EventCategory {
   party

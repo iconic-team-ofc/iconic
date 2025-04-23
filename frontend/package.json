@@ -12,6 +12,7 @@
   "dependencies": {
     "@babel/runtime": "^7.27.0",
     "@blackbox-vision/react-qr-reader": "^5.0.0",
+    "@supabase/supabase-js": "^2.49.4",
     "axios": "^1.8.4",
     "firebase": "^11.6.0",
     "html5-qrcode": "^2.3.8",
