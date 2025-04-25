@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiResponse } from '@nestjs/swagger';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -74,5 +75,23 @@ export class EventCheckinController {
   @ApiForbiddenResponse({ description: 'Only admins can delete check-ins' })
   delete(@Param('checkin_id') checkin_id: string) {
     return this.service.delete(checkin_id);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.admin, Role.scanner)
+  @Post('manual-checkin')
+  @ApiOperation({
+    summary: 'Manually check in a user using email (admin/scanner only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Check-in confirmed manually',
+  })
+  manualCheckin(@Body() body: { event_id: string; email: string }, @Req() req) {
+    return this.service.manualCheckinByEmail(
+      body.event_id,
+      body.email,
+      req.user.sub,
+    );
   }
 }

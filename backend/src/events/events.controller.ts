@@ -14,6 +14,7 @@ import { UpdateEventDto } from './dtos/update-event.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Req } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import {
   ApiBearerAuth,
@@ -111,5 +112,16 @@ export class EventsController {
   })
   remove(@Param('id') id: string) {
     return this.eventsService.remove(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('recommended')
+  @ApiOperation({ summary: 'List recommended events for the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a curated list of events for the user',
+  })
+  findRecommended(@Req() req) {
+    return this.eventsService.findRecommendedForUser(req.user.sub);
   }
 }
