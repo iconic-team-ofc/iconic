@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dtos/create-event.dto';
 import { UpdateEventDto } from './dtos/update-event.dto';
+import { NotFoundException } from '@nestjs/common';
+
 
 @Injectable()
 export class EventsService {
@@ -74,5 +76,22 @@ export class EventsService {
     return this.prisma.event.delete({
       where: { id },
     });
+  }
+
+  async findRecommendedForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const whereClause = user.is_iconic
+      ? { is_public: false, is_exclusive: true }
+      : {
+          OR: [
+            { is_public: true, is_exclusive: false },
+            { is_public: true, is_exclusive: true },
+          ],
+        };
+
+    return this.prisma.event.findMany({ where: whereClause });
   }
 }
