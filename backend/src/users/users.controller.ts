@@ -22,6 +22,7 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiBody
 } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -132,5 +133,25 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User returned by ID' })
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Get full public user profile and photos by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns full profile and up to 6 photos',
+  })
+  async getPublicProfile(@Param('id') id: string) {
+    return this.usersService.getPublicProfileWithPhotos(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile-picture')
+  @ApiOperation({ summary: 'Update main profile picture' })
+  @ApiBody({ schema: { example: { url: 'https://...' } } })
+  @ApiResponse({ status: 200, description: 'Profile picture updated' })
+  updateProfilePicture(@Req() req, @Body() body: { url: string }) {
+    return this.usersService.updateProfilePicture(req.user.sub, body.url);
   }
 }

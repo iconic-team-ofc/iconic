@@ -1,7 +1,11 @@
-// src/users/dtos/update-user.dto.ts
-import { IsOptional, IsString, IsBoolean, Length } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  Length,
+  IsUrl,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({ example: 'Nicollas Isaac' })
@@ -25,6 +29,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @IsUrl()
   profile_picture_url?: string;
 
   @ApiPropertyOptional({ example: 'Sou um profissional de eventos' })
@@ -37,4 +42,15 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   show_public_profile?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  show_profile_to_iconics?: boolean;
+
+  @ApiPropertyOptional({ example: 'nickzinho' })
+  @IsOptional()
+  @IsString()
+  @Length(3, 30)
+  nickname?: string;
 }

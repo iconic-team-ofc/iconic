@@ -14,7 +14,12 @@ import { EventParticipationService } from './event-participation.service';
 import { CreateEventParticipationDto } from './dtos/create-event-participation.dto';
 import { UpdateEventParticipationDto } from './dtos/update-event-participation.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ApiBearerAuth, ApiTags, ApiForbiddenResponse, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiForbiddenResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Role } from '@prisma/client';
@@ -56,14 +61,23 @@ export class EventParticipationController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Delete an event participation (admin only)' })
-  @ApiForbiddenResponse({ description: 'Only admins can delete participations.' })
+  @ApiForbiddenResponse({
+    description: 'Only admins can delete participations.',
+  })
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 
-  @Get('event/:eventId/confirmed')
-  @ApiOperation({ summary: 'Get confirmed users for an event' })
-  findConfirmed(@Param('eventId') eventId: string) {
-    return this.service.findConfirmedUsers(eventId);
+  @UseGuards(JwtAuthGuard)
+  @Get('event/:eventId/confirmed-users')
+  @ApiOperation({
+    summary: 'Get confirmed users for an event (with visibility rules)',
+  })
+  getConfirmed(@Req() req, @Param('eventId') eventId: string) {
+    return this.service.findConfirmedUsersWithProfiles(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
   }
 }

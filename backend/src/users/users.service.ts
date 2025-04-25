@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { Role } from '@prisma/client';
@@ -63,32 +67,31 @@ export class UsersService {
     const photos = await this.prisma.userPhoto.findMany({
       where: { user_id: id },
     });
-  
+
     const paths = photos.map((p) => `${id}/${p.url.split('/').pop()}`);
-  
+
     if (paths.length > 0) {
       const { error } = await this.supabase.storage
         .from('user-photos')
         .remove(paths);
-  
+
       if (error) {
         console.error('Erro ao deletar fotos do Supabase:', error);
         throw error;
       }
     }
-  
+
     // 🧹 Remove do banco: fotos do usuário
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
-  
+
     // 🧹 Remove participações do usuário em eventos
     await this.prisma.eventParticipation.deleteMany({
       where: { user_id: id },
     });
-  
+
     // 🧹 Remove o próprio usuário
     return this.prisma.user.delete({ where: { id } });
   }
-  
 
   async promoteToIconic(id: string) {
     return this.prisma.user.update({
@@ -134,6 +137,72 @@ export class UsersService {
       where: {
         show_public_profile: true,
       },
+    });
+  }
+
+  async getPublicProfileWithPhotos(
+    userId: string,
+    requesterId: string | null = null,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        photos: {
+          orderBy: { position: 'asc' },
+          select: {
+            id: true,
+            url: true,
+            position: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    if (!user.show_public_profile) {
+      if (!requesterId) throw new ForbiddenException('Private profile');
+
+      const requester = await this.prisma.user.findUnique({
+        where: { id: requesterId },
+      });
+      if (!requester) throw new ForbiddenException();
+
+      const isIconicRequester = requester.is_iconic;
+      if (!user.show_profile_to_iconics || !isIconicRequester) {
+        throw new ForbiddenException('Private profile');
+      }
+    }
+
+    const {
+      id,
+      full_name,
+      nickname,
+      bio,
+      instagram,
+      profile_picture_url,
+      is_iconic,
+      photos,
+    } = user;
+    return {
+      id,
+      full_name,
+      nickname,
+      bio,
+      instagram,
+      profile_picture_url,
+      is_iconic,
+      photos,
+    };
+  }
+
+  async updateProfilePicture(userId: string, url: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { profile_picture_url: url },
     });
   }
 }

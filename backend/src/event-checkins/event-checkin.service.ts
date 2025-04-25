@@ -126,4 +126,30 @@ export class EventCheckinService {
     if (!checkin) throw new NotFoundException('Check-in not found');
     return this.prisma.eventCheckin.delete({ where: { id: checkinId } });
   }
+
+  async manualCheckinByEmail(
+    eventId: string,
+    email: string,
+    scannerId: string,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const participation = await this.prisma.eventParticipation.findFirst({
+      where: { event_id: eventId, user_id: user.id, status: 'confirmed' },
+    });
+
+    if (!participation)
+      throw new ForbiddenException('User not confirmed for this event');
+
+    return this.prisma.eventCheckin.create({
+      data: {
+        user_id: user.id,
+        event_id: eventId,
+        checkin_time: new Date(),
+        qr_token: uuidv4(),
+        scanned_by_admin_id: scannerId,
+      },
+    });
+  }
 }
