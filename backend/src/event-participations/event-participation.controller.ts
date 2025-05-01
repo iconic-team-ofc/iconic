@@ -60,7 +60,7 @@ export class EventParticipationController {
     return this.service.update(id, dto);
   }
 
-  @UseGuards(RolesGuard, JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
   @Delete(':id')
   @HttpCode(204)
