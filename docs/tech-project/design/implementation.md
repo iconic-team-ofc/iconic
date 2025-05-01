@@ -1,4 +1,4 @@
-Perfeito. Abaixo está a representação profissional e atualizada da **arquitetura do backend ICONIC**, com o foco exclusivamente no backend NestJS e considerando a fila BullMQ apenas para o fluxo de **inscrição em eventos**.
+A seguir, apresentamos a descrição profissional e atualizada da **arquitetura do backend ICONIC**, com foco exclusivo no backend NestJS e na utilização da fila BullMQ para o fluxo de **inscrição em eventos**.
 
 ---
 
