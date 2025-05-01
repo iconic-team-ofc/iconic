@@ -1,34 +1,32 @@
 # 1. Etapa de build
 FROM node:18-alpine AS builder
 
-# Diretório de trabalho
 WORKDIR /usr/src/app/backend
 
-# Copia arquivos de dependência
+# Instala dependências
 COPY backend/package*.json ./
-
-# Instala todas as dependências (inclusive dev) com workaround para peer deps
 RUN npm install --legacy-peer-deps
 
-# Copia todo o código-fonte
+# Copia o restante dos arquivos
 COPY backend/ ./
 
-# Compila a aplicação
+# Gera o Prisma Client
+RUN npx prisma generate
+
+# Compila o projeto
 RUN npm run build
 
 # 2. Etapa de execução
 FROM node:18-alpine AS runner
 
-# Define diretório de trabalho
 WORKDIR /usr/src/app
 
-# Copia apenas os arquivos necessários da etapa anterior
+# Copia os arquivos necessários da etapa de build
 COPY --from=builder /usr/src/app/backend/dist ./dist
 COPY --from=builder /usr/src/app/backend/node_modules ./node_modules
 COPY --from=builder /usr/src/app/backend/package.json ./
 
-# Expõe a porta da aplicação
+# Expõe a porta da API
 EXPOSE 3000
 
-# Comando de inicialização da aplicação
 CMD ["node", "dist/main.js"]
