@@ -18,7 +18,7 @@ enum Role {
 model User {
   id                        String       @id @default(uuid())
   full_name                 String
-  email                    String       @unique
+  email                     String       @unique
   phone_number              String?
   instagram                 String?
   nickname                  String       @unique @db.VarChar(30)
@@ -29,6 +29,7 @@ model User {
   is_iconic                 Boolean      @default(false)
   iconic_expires_at         DateTime?
   role                      Role         @default(user)
+  date_of_birth             DateTime?  
   created_at                DateTime     @default(now())
   updated_at                DateTime     @updatedAt
 
@@ -39,6 +40,7 @@ model User {
 
   @@map("User")
 }
+
 
 model UserPhoto {
   id         String   @id @default(uuid())

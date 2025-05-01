@@ -8,22 +8,20 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 import { differenceInSeconds } from 'date-fns';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class EventCheckinService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async generate(userId: string, eventId: string) {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-    });
+    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException('Event not found');
 
     const participation = await this.prisma.eventParticipation.findFirst({
       where: { user_id: userId, event_id: eventId, status: 'confirmed' },
     });
-    if (!participation)
-      throw new ForbiddenException('You are not confirmed for this event');
+    if (!participation) throw new ForbiddenException('You are not confirmed for this event');
 
     const alreadyCheckedIn = await this.prisma.eventCheckin.findFirst({
       where: {
@@ -32,8 +30,7 @@ export class EventCheckinService {
         NOT: { checkin_time: new Date(0) },
       },
     });
-    if (alreadyCheckedIn)
-      throw new ConflictException('You have already checked in');
+    if (alreadyCheckedIn) throw new ConflictException('You have already checked in');
 
     const lastPending = await this.prisma.eventCheckin.findFirst({
       where: {
@@ -43,7 +40,6 @@ export class EventCheckinService {
       },
       orderBy: { created_at: 'desc' },
     });
-
     if (lastPending) {
       const seconds = differenceInSeconds(new Date(), lastPending.created_at);
       if (seconds < 15) {
@@ -73,7 +69,6 @@ export class EventCheckinService {
     const checkin = await this.prisma.eventCheckin.findUnique({
       where: { qr_token },
     });
-
     if (!checkin) throw new NotFoundException('QR code not found');
 
     if (checkin.checkin_time.getTime() !== new Date(0).getTime()) {
@@ -94,6 +89,17 @@ export class EventCheckinService {
         checkin_time: new Date(),
         scanned_by_admin_id: scannerId,
       },
+      include: {
+        user: {
+          select: {
+            full_name: true,
+            nickname: true,
+            email: true,
+            date_of_birth: true,
+            is_iconic: true,
+          },
+        },
+      },
     });
   }
 
@@ -108,14 +114,9 @@ export class EventCheckinService {
     return this.prisma.eventCheckin.findMany({
       where: {
         event_id: eventId,
-        checkin_time: {
-          not: new Date(0),
-        },
+        checkin_time: { not: new Date(0) },
       },
-      include: {
-        user: true,
-        scanned_by: true,
-      },
+      include: { user: true, scanned_by: true },
     });
   }
 
@@ -138,7 +139,6 @@ export class EventCheckinService {
     const participation = await this.prisma.eventParticipation.findFirst({
       where: { event_id: eventId, user_id: user.id, status: 'confirmed' },
     });
-
     if (!participation)
       throw new ForbiddenException('User not confirmed for this event');
 
@@ -150,6 +150,57 @@ export class EventCheckinService {
         qr_token: uuidv4(),
         scanned_by_admin_id: scannerId,
       },
+    });
+  }
+
+  async findCheckedInUsersWithProfiles(
+    eventId: string,
+    requesterId: string,
+    requesterRole: Role,
+  ) {
+    const checkins = await this.prisma.eventCheckin.findMany({
+      where: {
+        event_id: eventId,
+        checkin_time: { not: new Date(0) },
+      },
+      include: { user: true },
+    });
+
+    const isAdmin = requesterRole === 'admin';
+    const requesterIsCheckedIn = checkins.some(
+      (c) => c.user_id === requesterId,
+    );
+    if (!requesterIsCheckedIn && !isAdmin) {
+      throw new ForbiddenException(
+        'Você precisa ter feito check-in para ver os participantes',
+      );
+    }
+
+    return checkins.map(({ user }) => {
+      const isPublic = user.show_public_profile;
+      const isIconicVisible =
+        user.show_profile_to_iconics && requesterRole === 'iconic';
+
+      if (
+        isAdmin ||
+        isPublic ||
+        isIconicVisible ||
+        user.id === requesterId
+      ) {
+        return {
+          id: user.id,
+          full_name: user.full_name,
+          nickname: user.nickname,
+          is_iconic: user.is_iconic,
+          profile_picture_url: user.profile_picture_url,
+        };
+      }
+      return {
+        id: user.id,
+        nickname: 'Perfil fechado',
+        is_iconic: user.is_iconic,
+        profile_picture_url: null,
+      };
     });
   }
 }

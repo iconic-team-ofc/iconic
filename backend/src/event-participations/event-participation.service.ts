@@ -8,14 +8,31 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventParticipationDto } from './dtos/create-event-participation.dto';
 import { UpdateEventParticipationDto } from './dtos/update-event-participation.dto';
 import { Role } from '@prisma/client';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @Injectable()
 export class EventParticipationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('participation') private participationQueue: Queue,
+  ) {}
 
   async create(userId: string, dto: CreateEventParticipationDto) {
+    await this.participationQueue.add('register-user', {
+      userId,
+      eventId: dto.event_id,
+    });
+
+    return {
+      status: 'queued',
+      message: 'Registration is being processed',
+    };
+  }
+
+  async registerLogic(userId: string, eventId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const event = await tx.event.findUnique({ where: { id: dto.event_id } });
+      const event = await tx.event.findUnique({ where: { id: eventId } });
       if (!event) throw new NotFoundException('Event not found');
 
       const user = await tx.user.findUnique({ where: { id: userId } });
@@ -26,7 +43,7 @@ export class EventParticipationService {
       }
 
       const existing = await tx.eventParticipation.findFirst({
-        where: { user_id: userId, event_id: dto.event_id },
+        where: { user_id: userId, event_id: eventId },
       });
 
       if (existing?.status === 'confirmed') {
@@ -39,7 +56,7 @@ export class EventParticipationService {
         }
 
         await tx.event.update({
-          where: { id: dto.event_id },
+          where: { id: eventId },
           data: { current_attendees: { increment: 1 } },
         });
 
@@ -57,14 +74,14 @@ export class EventParticipationService {
       }
 
       await tx.event.update({
-        where: { id: dto.event_id },
+        where: { id: eventId },
         data: { current_attendees: { increment: 1 } },
       });
 
       return tx.eventParticipation.create({
         data: {
           user_id: userId,
-          event_id: dto.event_id,
+          event_id: eventId,
           status: 'confirmed',
         },
       });
@@ -90,7 +107,8 @@ export class EventParticipationService {
         where: { id },
       });
 
-      if (!participation) throw new NotFoundException('Participation not found');
+      if (!participation)
+        throw new NotFoundException('Participation not found');
 
       await this.prisma.$transaction([
         this.prisma.event.update({
@@ -159,7 +177,7 @@ export class EventParticipationService {
       } else {
         return {
           id: user.id,
-          nickname: 'Perfil fechado',
+          nickname: 'Perfil Privado',
           is_iconic: user.is_iconic,
           profile_picture_url: null,
         };

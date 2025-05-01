@@ -23,8 +23,9 @@ export class UsersService {
     full_name: string;
     profile_picture_url?: string;
     phone_number?: string;
+    date_of_birth?: Date;
   }) {
-    const { email, full_name, profile_picture_url, phone_number } = data;
+    const { email, full_name, profile_picture_url, phone_number, date_of_birth } = data;
 
     let user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -37,6 +38,7 @@ export class UsersService {
           phone_number,
           role: Role.user,
           nickname: email.split('@')[0],
+          date_of_birth,
         },
       });
     }
@@ -81,15 +83,12 @@ export class UsersService {
       }
     }
 
-    // 🧹 Remove do banco: fotos do usuário
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
 
-    // 🧹 Remove participações do usuário em eventos
     await this.prisma.eventParticipation.deleteMany({
       where: { user_id: id },
     });
 
-    // 🧹 Remove o próprio usuário
     return this.prisma.user.delete({ where: { id } });
   }
 

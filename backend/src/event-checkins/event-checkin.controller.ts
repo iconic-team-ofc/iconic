@@ -31,6 +31,7 @@ import { AdminCheckinDto } from './dtos/admin-checkin.dto';
 export class EventCheckinController {
   constructor(private readonly service: EventCheckinService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('generate')
   @ApiOperation({
     summary: 'Generate QR code for event (user must be confirmed)',
@@ -40,7 +41,7 @@ export class EventCheckinController {
     return this.service.generate(userId, dto.event_id);
   }
 
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, JwtAuthGuard)
   @Roles(Role.admin, Role.scanner)
   @Post('scan')
   @ApiOperation({
@@ -51,12 +52,14 @@ export class EventCheckinController {
     return this.service.scan(dto.qr_token, scannerId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('event/:eventId')
   @ApiOperation({ summary: 'List all check-ins for a specific event' })
   findByEvent(@Param('eventId') eventId: string) {
     return this.service.findByEvent(eventId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('event/:eventId/with-scanner')
   @UseGuards(RolesGuard)
   @Roles(Role.admin, Role.scanner)
@@ -65,6 +68,20 @@ export class EventCheckinController {
   })
   findWithScanner(@Param('eventId') eventId: string) {
     return this.service.findWithScannerInfo(eventId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('event/:eventId/checked-in-users')
+  @ApiOperation({
+    summary:
+      'List all users that checked-in to the event (with visibility rules)',
+  })
+  getCheckedInUsers(@Req() req, @Param('eventId') eventId: string) {
+    return this.service.findCheckedInUsersWithProfiles(
+      eventId,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   @Delete(':checkin_id')
