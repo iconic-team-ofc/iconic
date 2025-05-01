@@ -83,15 +83,12 @@ export class UsersService {
       }
     }
 
-    // 🧹 Remove do banco: fotos do usuário
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
 
-    // 🧹 Remove participações do usuário em eventos
     await this.prisma.eventParticipation.deleteMany({
       where: { user_id: id },
     });
 
-    // 🧹 Remove o próprio usuário
     return this.prisma.user.delete({ where: { id } });
   }
 
