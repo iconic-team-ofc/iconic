@@ -78,6 +78,8 @@ export class UsersController {
     return this.usersService.findIconicUsers();
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.admin)
   @Get('public')
   @ApiOperation({ summary: 'Get users with public profiles' })
   @ApiResponse({ status: 200, description: 'List of public users' })
@@ -86,6 +88,7 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Roles(Role.admin)
   @Get()
   @ApiOperation({ summary: 'List all users (admin only recommended)' })
   @ApiResponse({ status: 200, description: 'All users returned' })

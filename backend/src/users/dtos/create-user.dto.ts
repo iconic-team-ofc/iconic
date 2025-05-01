@@ -5,6 +5,7 @@ import {
   Length,
   IsBoolean,
   IsUrl,
+  IsDateString
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -57,4 +58,9 @@ export class CreateUserDto {
   @IsString()
   @Length(3, 30)
   nickname?: string;
+
+  @ApiPropertyOptional({ example: '1990-05-15' })
+  @IsOptional()
+  @IsDateString()
+  date_of_birth?: string;
 }

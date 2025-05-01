@@ -31,6 +31,7 @@ import { Role } from '@prisma/client';
 export class EventParticipationController {
   constructor(private readonly service: EventParticipationService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: 'Register current user in an event' })
   create(@Req() req, @Body() dto: CreateEventParticipationDto) {
@@ -38,25 +39,28 @@ export class EventParticipationController {
     return this.service.create(userId, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'List all participations (admin only)' })
   findAll() {
     return this.service.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get participation by ID' })
   findOne(@Param('id') id: string) {
     return this.service.findById(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Cancel your participation' })
   update(@Param('id') id: string, @Body() dto: UpdateEventParticipationDto) {
     return this.service.update(id, dto);
   }
 
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.admin)
   @Delete(':id')
   @HttpCode(204)
