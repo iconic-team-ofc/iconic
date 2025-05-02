@@ -7,11 +7,25 @@ export default {
   theme: {
     extend: {
       colors: {
+<<<<<<< Updated upstream
         background: '#121212',
         primary:    '#A557F2',
         secondary:  '#BFBFBF',
         text:       '#FFFFFF',
         hover:      '#C17FF5',
+=======
+        primary: "#A557F2",
+        hover: "#C17FF5",
+      },
+      keyframes: {
+        "gradient-pan": {
+          "0%, 100%": { "background-position": "0% 50%" },
+          "50%": { "background-position": "100% 50%" },
+        },
+      },
+      animation: {
+        "gradient-pan": "gradient-pan 3s ease infinite",
+>>>>>>> Stashed changes
       },
     },
   },
