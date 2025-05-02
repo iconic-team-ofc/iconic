@@ -1,23 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <script src="https://cdn.tailwindcss.com"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ICONIC</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
 
+    <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              background: "#121212",
+              background: "#1F1F1F",
               primary:    "#A557F2",
               secondary:  "#BFBFBF",
               text:       "#FFFFFF",
@@ -25,31 +20,41 @@
               gold:       "#CBA135",
             },
             keyframes: {
-              'gradient-pan': {
-                '0%, 100%': { 'background-position': '0% 50%' },
-                '50%':      { 'background-position': '100% 50%' },
+              "gradient-pan": {
+                "0%, 100%": { "background-position": "0% 50%" },
+                "50%":      { "background-position": "100% 50%" },
               },
             },
             animation: {
-              'gradient-pan': 'gradient-pan 4s ease infinite',
+              "gradient-pan": "gradient-pan 3s ease infinite",
+            },
+            // gradient no texto do título
+            backgroundImage: {
+              "text-gradient": "linear-gradient(90deg, #A557F2, #C17FF5, #EC4899)",
             },
           },
         },
-      }
+      };
     </script>
-    
-    <!-- animação de gradiente extra -->
+
+    <!-- Estilos extras para btn-gradient e título -->
     <style>
       .btn-gradient {
         background: linear-gradient(
           90deg,
-          theme('colors.primary'),
-          theme('colors.hover'),
-          #EC4899 /* rosa Tailwind pink-500 */
+          #A557F2,
+          #C17FF5,
+          #EC4899
         );
         background-size: 200% 200%;
       }
+      .text-gradientTitle {
+        @apply bg-clip-text text-transparent bg-text-gradient;
+      }
     </style>
-    
+  </head>
+  <body class="bg-background">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

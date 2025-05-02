@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+// importa o SVG local
+import GoogleLogo from "@/assets/icons8-google-logo-96.svg";
 
 export default function Login() {
   const { login } = useAuth();
@@ -21,9 +23,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-6">
-      <div className="w-full max-w-sm bg-[#1A1A1A] rounded-2xl shadow-xl p-6 text-center">
-        <h1 className="text-primary text-4xl sm:text-5xl font-extrabold uppercase tracking-wide drop-shadow-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-6">
+      <div className="w-full max-w-sm bg-gray-800 rounded-2xl shadow-2xl p-6 text-center">
+        <h1 className="text-gradientTitle text-4xl sm:text-5xl font-extrabold uppercase tracking-wide">
           ICONIC
         </h1>
         <div className="mx-auto mt-3 mb-5 h-1 w-12 bg-gold rounded-full animate-pulse" />
@@ -41,7 +43,7 @@ export default function Login() {
             w-full inline-flex items-center justify-center gap-3
             text-text font-semibold py-3 rounded-full shadow-lg
             focus:outline-none focus:ring-2 focus:ring-gold
-            transition 
+            transition  
             ${
               loading
                 ? "bg-secondary cursor-not-allowed"
@@ -50,11 +52,7 @@ export default function Login() {
           `}
         >
           {!loading && (
-            <img
-              src="https://developers.google.com/identity/images/g-logo.png"
-              alt="Google logo"
-              className="w-6 h-6"
-            />
+            <img src={GoogleLogo} alt="Google logo" className="w-6 h-6" />
           )}
           {loading ? "Entrando..." : "Entrar com Google"}
         </button>
