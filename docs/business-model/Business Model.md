@@ -119,7 +119,7 @@ ICONIC é uma **plataforma de acesso exclusivo a experiências premium** ligadas
 
 ## 8. Flywheel ICONIC
 
-![[Pasted image 20250501224031.png]]
+![Flywheel model illustrating ICONIC's business strategy](Pasted%20image%2020250501224031.png)
 
 ---
 
