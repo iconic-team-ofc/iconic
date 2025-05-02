@@ -1,0 +1,13 @@
+/* src/styles/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* fallback global */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #121212; /* Tailwind: bg-background */
+  color: #FFFFFF;           /* Tailwind: text-text */
+  font-family: sans-serif;
+}
