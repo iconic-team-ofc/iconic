@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { loginWithGoogle } from "@/firebase";
 import { api } from "@/lib/api";
 
@@ -25,32 +31,31 @@ const AuthContext = createContext<AuthContextProps>({
   logout: () => {},
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token")
   );
+  const [initialized, setInitialized] = useState(false);
 
-  const fetchMe = async (token: string) => {
-    const res = await api.get("/users/me", {
-      headers: { Authorization: `Bearer ${token}` },
+  const fetchMe = async (jwt: string) => {
+    const res = await api.get<User>("/users/me", {
+      headers: { Authorization: `Bearer ${jwt}` },
     });
     setUser(res.data);
   };
 
   const login = async () => {
-    try {
-      const idToken = await loginWithGoogle();
-      const res = await api.post("/auth/login/firebase", { idToken });
-      const jwt = res.data.access_token;
-      localStorage.setItem("token", jwt);
-      setToken(jwt);
-      await fetchMe(jwt);
-    } catch (err) {
-      console.error("Erro ao autenticar", err);
-      logout();
-      throw err;
-    }
+    const idToken = await loginWithGoogle();
+    if (!idToken) throw new Error("Falha ao autenticar no Google");
+    const res = await api.post<{ access_token: string }>(
+      "/auth/login/firebase",
+      { idToken }
+    );
+    const jwt = res.data.access_token;
+    localStorage.setItem("token", jwt);
+    setToken(jwt);
+    await fetchMe(jwt);
   };
 
   const logout = () => {
@@ -60,8 +65,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    if (token) fetchMe(token).catch(logout);
-  }, [token]);
+    (async () => {
+      if (token) {
+        try {
+          await fetchMe(token);
+        } catch {
+          logout();
+        }
+      }
+      setInitialized(true);
+    })();
+  }, []);
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-700">Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>
