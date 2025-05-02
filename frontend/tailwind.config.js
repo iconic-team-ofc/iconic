@@ -1,19 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './index.html',
-    './src/**/*.{js,ts,jsx,tsx}',
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-<<<<<<< Updated upstream
-        background: '#121212',
-        primary:    '#A557F2',
-        secondary:  '#BFBFBF',
-        text:       '#FFFFFF',
-        hover:      '#C17FF5',
-=======
         primary: "#A557F2",
         hover: "#C17FF5",
       },
@@ -25,7 +15,6 @@ export default {
       },
       animation: {
         "gradient-pan": "gradient-pan 3s ease infinite",
->>>>>>> Stashed changes
       },
     },
   },
