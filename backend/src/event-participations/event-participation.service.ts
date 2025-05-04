@@ -1,3 +1,5 @@
+// src/event-participation/event-participation.service.ts
+
 import {
   Injectable,
   NotFoundException,
@@ -8,76 +10,75 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventParticipationDto } from './dtos/create-event-participation.dto';
 import { UpdateEventParticipationDto } from './dtos/update-event-participation.dto';
 import { Role } from '@prisma/client';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 
 @Injectable()
 export class EventParticipationService {
-  constructor(
-    private prisma: PrismaService,
-    @InjectQueue('participation') private participationQueue: Queue,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Registra imediatamente a participação, usando lógica atômica
+   * sem fila de processamento.
+   */
   async create(userId: string, dto: CreateEventParticipationDto) {
-    await this.participationQueue.add('register-user', {
-      userId,
-      eventId: dto.event_id,
-    });
-
-    return {
-      status: 'queued',
-      message: 'Registration is being processed',
-    };
+    return this.registerLogic(userId, dto.event_id);
   }
 
-  async registerLogic(userId: string, eventId: string) {
+  /**
+   * Lógica transacional de inscrição:
+   * - Verifica existência de evento e usuário
+   * - Garante vagas disponíveis
+   * - Impede duplicidade e respeita cancelamentos anteriores
+   * - Atualiza contador de participantes de forma atômica
+   */
+  private async registerLogic(userId: string, eventId: string) {
     return this.prisma.$transaction(async (tx) => {
+      // 1) busca evento
       const event = await tx.event.findUnique({ where: { id: eventId } });
-      if (!event) throw new NotFoundException('Event not found');
+      if (!event) throw new NotFoundException('Evento não encontrado');
 
+      // 2) busca usuário
       const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user) throw new NotFoundException('User not found');
+      if (!user) throw new NotFoundException('Usuário não encontrado');
 
+      // 3) exclusividade
       if (event.is_exclusive && !user.is_iconic) {
-        throw new ForbiddenException('Only ICONIC users can join this event');
+        throw new ForbiddenException(
+          'Apenas usuários ICÔNIC podem participar deste evento',
+        );
       }
 
+      // 4) verifica participações anteriores
       const existing = await tx.eventParticipation.findFirst({
         where: { user_id: userId, event_id: eventId },
       });
 
       if (existing?.status === 'confirmed') {
-        throw new ConflictException('You already joined this event');
+        throw new ConflictException('Você já está inscrito neste evento');
       }
 
+      // 5) reativação de inscrição cancelada
       if (existing?.status === 'cancelled') {
         if (event.current_attendees >= event.max_attendees) {
-          throw new ForbiddenException('Event is full');
+          throw new ForbiddenException('Ingressos esgotados');
         }
-
         await tx.event.update({
           where: { id: eventId },
           data: { current_attendees: { increment: 1 } },
         });
-
         return tx.eventParticipation.update({
           where: { id: existing.id },
-          data: {
-            status: 'confirmed',
-            cancelled_at: null,
-          },
+          data: { status: 'confirmed', cancelled_at: null },
         });
       }
 
+      // 6) nova inscrição
       if (event.current_attendees >= event.max_attendees) {
-        throw new ForbiddenException('Event is full');
+        throw new ForbiddenException('Ingressos esgotados');
       }
-
       await tx.event.update({
         where: { id: eventId },
         data: { current_attendees: { increment: 1 } },
       });
-
       return tx.eventParticipation.create({
         data: {
           user_id: userId,
@@ -101,15 +102,17 @@ export class EventParticipationService {
     });
   }
 
+  /**
+   * Cancela participação decrementando o contador de vagas.
+   */
   async update(id: string, dto: UpdateEventParticipationDto) {
     if (dto.status === 'cancelled') {
       const participation = await this.prisma.eventParticipation.findUnique({
         where: { id },
       });
-
-      if (!participation)
-        throw new NotFoundException('Participation not found');
-
+      if (!participation) {
+        throw new NotFoundException('Participação não encontrada');
+      }
       await this.prisma.$transaction([
         this.prisma.event.update({
           where: { id: participation.event_id },
@@ -117,16 +120,12 @@ export class EventParticipationService {
         }),
         this.prisma.eventParticipation.update({
           where: { id },
-          data: {
-            status: 'cancelled',
-            cancelled_at: new Date(),
-          },
+          data: { status: 'cancelled', cancelled_at: new Date() },
         }),
       ]);
-
-      return { message: 'Participation cancelled' };
+      return { message: 'Participação cancelada' };
     }
-
+    // outros updates simples
     return this.prisma.eventParticipation.update({
       where: { id },
       data: dto,
@@ -137,6 +136,10 @@ export class EventParticipationService {
     return this.prisma.eventParticipation.delete({ where: { id } });
   }
 
+  /**
+   * Retorna usuários confirmados, aplicando regras de visibilidade:
+   * só permite acesso se o solicitante for admin ou já estiver confirmado.
+   */
   async findConfirmedUsersWithProfiles(
     eventId: string,
     requesterId: string,
@@ -144,20 +147,16 @@ export class EventParticipationService {
   ) {
     const participations = await this.prisma.eventParticipation.findMany({
       where: { event_id: eventId, status: 'confirmed' },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
 
     const isAdmin = requesterRole === 'admin';
-
-    const requesterIsConfirmed = participations.some(
+    const isRequesterConfirmed = participations.some(
       (p) => p.user_id === requesterId,
     );
-
-    if (!requesterIsConfirmed && !isAdmin) {
+    if (!isRequesterConfirmed && !isAdmin) {
       throw new ForbiddenException(
-        'Você precisa estar confirmado no evento para ver os perfis',
+        'Você precisa estar confirmado para ver os perfis',
       );
     }
 
@@ -174,14 +173,13 @@ export class EventParticipationService {
           is_iconic: user.is_iconic,
           profile_picture_url: user.profile_picture_url,
         };
-      } else {
-        return {
-          id: user.id,
-          nickname: 'Perfil Privado',
-          is_iconic: user.is_iconic,
-          profile_picture_url: null,
-        };
       }
+      return {
+        id: user.id,
+        nickname: 'Perfil Privado',
+        is_iconic: user.is_iconic,
+        profile_picture_url: null,
+      };
     });
   }
 }

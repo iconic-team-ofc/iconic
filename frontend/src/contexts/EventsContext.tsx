@@ -1,73 +1,125 @@
 import React, {
   createContext,
-  useState,
   useContext,
+  useState,
   useEffect,
   ReactNode,
 } from "react";
 import { api } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
-import type { Event } from "@/components/EventCard";
 
-interface EventsContextProps {
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  date: string;
+  time: string;
+  category: string;
+  is_exclusive: boolean;
+  is_public: boolean;
+  max_attendees: number;
+  current_attendees: number;
+  partner_name?: string;
+  partner_logo_url?: string;
+  cover_image_url: string;
+  created_at: string;
+
+  // Novos campos vindos do backend:
+  is_participating: boolean;
+  participation_id?: string;
+}
+
+interface EventsContextData {
   events: Event[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   participate: (eventId: string) => Promise<void>;
+  cancelParticipation: (
+    participationId: string,
+    eventId: string
+  ) => Promise<void>;
 }
 
-const EventsContext = createContext<EventsContextProps>({
-  events: [],
-  loading: false,
-  error: null,
-  refresh: async () => {},
-  participate: async () => {},
-});
+const EventsContext = createContext<EventsContextData>({} as EventsContextData);
 
-export const EventsProvider = ({ children }: { children: ReactNode }) => {
-  const { token } = useAuth();
+export function EventsProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Async function refresh must be declared async
-  const refresh = async (): Promise<void> => {
-    if (!token) return;
+  // Busca recomendados com flags
+  const refresh = async () => {
     setLoading(true);
     try {
-      const res = await api.get<Event[]>("/events/recommended");
-      const data = Array.isArray(res.data) ? res.data : [];
+      const { data } = await api.get<Event[]>("/events/recommended");
       setEvents(data);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Erro ao carregar eventos recomendados");
+      setError("Erro ao carregar eventos");
     } finally {
       setLoading(false);
     }
   };
 
-  const participate = async (eventId: string): Promise<void> => {
-    try {
-      await api.post("/event-participations", { event_id: eventId });
-      await refresh();
-    } catch (err: any) {
-      console.error("Erro ao participar:", err);
-      throw err;
-    }
-  };
-
   useEffect(() => {
     refresh();
-  }, [token]);
+  }, []);
+
+  const participate = async (eventId: string) => {
+    const { data } = await api.post<{ id: string }>("/event-participations", {
+      event_id: eventId,
+      status: "confirmed",
+    });
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === eventId
+          ? {
+              ...e,
+              is_participating: true,
+              participation_id: data.id,
+              current_attendees: e.current_attendees + 1,
+            }
+          : e
+      )
+    );
+  };
+
+  const cancelParticipation = async (
+    participationId: string,
+    eventId: string
+  ) => {
+    await api.patch(`/event-participations/${participationId}`, {
+      status: "cancelled",
+    });
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === eventId
+          ? {
+              ...e,
+              is_participating: false,
+              participation_id: undefined,
+              current_attendees: e.current_attendees - 1,
+            }
+          : e
+      )
+    );
+  };
 
   return (
     <EventsContext.Provider
-      value={{ events, loading, error, refresh, participate }}
+      value={{
+        events,
+        loading,
+        error,
+        refresh,
+        participate,
+        cancelParticipation,
+      }}
     >
       {children}
     </EventsContext.Provider>
   );
-};
+}
 
 export const useEvents = () => useContext(EventsContext);
