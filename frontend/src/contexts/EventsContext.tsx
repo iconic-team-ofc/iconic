@@ -48,7 +48,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Puxa a lista com is_participating e participation_id
+  // Busca recomendados com flags
   const refresh = async () => {
     setLoading(true);
     try {
@@ -71,7 +71,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       event_id: eventId,
       status: "confirmed",
     });
-    // atualiza estado local sem refetch completo
     setEvents((prev) =>
       prev.map((e) =>
         e.id === eventId

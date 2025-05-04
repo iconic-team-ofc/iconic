@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-=======
-// src/pages/Home.tsx
 import React from "react";
 import { useEvents, EventsProvider } from "@/contexts/EventsContext";
 import { EventCard } from "@/components/EventCard";
@@ -17,7 +14,7 @@ function HomeContent() {
 
       {/* Conteúdo */}
       <main className="flex-1 overflow-auto px-4 mt-4">
-        {/* Headline discreta inspirada na proposta “Viver o que é ICÔNICO” */}
+        {/* Headline mais clean e alinhada ao marketing */}
         <h2 className="text-lg font-medium text-gray-700 mb-1">
           Viva experiências memoráveis
         </h2>
@@ -30,9 +27,7 @@ function HomeContent() {
             Carregando suas experiências…
           </p>
         )}
-
         {error && <p className="text-center text-red-500 mt-10">{error}</p>}
-
         {!loading && !error && events.length === 0 && (
           <p className="text-center text-gray-500 mt-10">
             Em breve novas experiências disponíveis. Fique de olho!
@@ -52,12 +47,10 @@ function HomeContent() {
   );
 }
 
->>>>>>> Stashed changes
 export default function Home() {
-    return (
-      <div className="text-white p-4">
-        <h1 className="text-2xl font-bold">Bem-vindo à ICONIC!</h1>
-      </div>
-    );
-  }
-  
+  return (
+    <EventsProvider>
+      <HomeContent />
+    </EventsProvider>
+  );
+}

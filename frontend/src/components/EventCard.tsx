@@ -35,6 +35,7 @@ export function EventCard({ event }: { event: Event }) {
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+      {/* Capa e badges */}
       <div className="relative">
         <img
           className="w-full h-44 object-cover"
@@ -56,6 +57,7 @@ export function EventCard({ event }: { event: Event }) {
         )}
       </div>
 
+      {/* Conteúdo */}
       <div className="p-4 space-y-3">
         <h3 className="text-lg font-semibold text-gray-800">{event.title}</h3>
         <p className="text-gray-600 text-sm line-clamp-2">
@@ -81,6 +83,7 @@ export function EventCard({ event }: { event: Event }) {
           </div>
         )}
 
+        {/* Ações */}
         <div className="mt-4 flex gap-2">
           <button
             onClick={handleParticipation}
