@@ -12,12 +12,8 @@
         theme: {
           extend: {
             colors: {
-              background: "#1F1F1F",
-              primary:    "#A557F2",
-              secondary:  "#BFBFBF",
-              text:       "#FFFFFF",
-              hover:      "#C17FF5",
-              gold:       "#CBA135",
+              primary: "#A557F2",
+              hover:   "#C17FF5",
             },
             keyframes: {
               "gradient-pan": {
@@ -28,32 +24,12 @@
             animation: {
               "gradient-pan": "gradient-pan 3s ease infinite",
             },
-            // gradient no texto do título
-            backgroundImage: {
-              "text-gradient": "linear-gradient(90deg, #A557F2, #C17FF5, #EC4899)",
-            },
           },
         },
       };
     </script>
-
-    <!-- Estilos extras para btn-gradient e título -->
-    <style>
-      .btn-gradient {
-        background: linear-gradient(
-          90deg,
-          #A557F2,
-          #C17FF5,
-          #EC4899
-        );
-        background-size: 200% 200%;
-      }
-      .text-gradientTitle {
-        @apply bg-clip-text text-transparent bg-text-gradient;
-      }
-    </style>
   </head>
-  <body class="bg-background">
+  <body class="bg-gray-50">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
