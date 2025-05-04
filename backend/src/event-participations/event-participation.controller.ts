@@ -1,3 +1,5 @@
+// src/event-participations/event-participation.controller.ts
+
 import {
   Controller,
   Post,
@@ -31,48 +33,43 @@ import { Role } from '@prisma/client';
 export class EventParticipationController {
   constructor(private readonly service: EventParticipationService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: 'Register current user in an event' })
-  create(@Req() req, @Body() dto: CreateEventParticipationDto) {
+  async create(@Req() req, @Body() dto: CreateEventParticipationDto) {
     const userId = req.user.sub;
+    // chama create(), que faz toda a lógica transacional internamente
     return this.service.create(userId, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'List all participations (admin only)' })
+  @UseGuards(RolesGuard)
+  @Roles(Role.admin)
   findAll() {
     return this.service.findAll();
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get participation by ID' })
   findOne(@Param('id') id: string) {
     return this.service.findById(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Cancel your participation' })
   update(@Param('id') id: string, @Body() dto: UpdateEventParticipationDto) {
     return this.service.update(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.admin)
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Delete an event participation (admin only)' })
-  @ApiForbiddenResponse({
-    description: 'Only admins can delete participations.',
-  })
+  @UseGuards(RolesGuard)
+  @Roles(Role.admin)
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('event/:eventId/confirmed-users')
   @ApiOperation({
     summary: 'Get confirmed users for an event (with visibility rules)',
