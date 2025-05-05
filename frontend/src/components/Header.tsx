@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { User as UserIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
@@ -14,7 +14,7 @@ export function Header() {
         </h1>
       </Link>
       <button onClick={logout} aria-label="Logout">
-        <UserIcon className="w-6 h-6 text-gray-500 hover:text-gray-900 transition" />
+        <LogOut className="w-6 h-6 text-gray-500 hover:text-gray-900 transition" />
       </button>
     </header>
   );

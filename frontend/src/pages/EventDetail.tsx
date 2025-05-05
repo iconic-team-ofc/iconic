@@ -5,13 +5,7 @@ import { Calendar, Clock, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
-
-interface User {
-  id: string;
-  full_name: string;
-  nickname: string;
-  profile_picture_url: string | null;
-}
+import { UserGrid } from "@/components/UserGrid";
 
 interface EventDetail {
   id: string;
@@ -26,8 +20,6 @@ interface EventDetail {
   partner_logo_url?: string;
   max_attendees: number;
   current_attendees: number;
-
-  // Flags vindas do novo endpoint
   is_participating: boolean;
   participation_id?: string;
 }
@@ -36,7 +28,6 @@ export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
@@ -44,16 +35,8 @@ export default function EventDetail() {
     if (!id) return;
     (async () => {
       try {
-        // agora o GET /events/:id já retorna is_participating + participation_id
         const { data: evt } = await api.get<EventDetail>(`/events/${id}`);
         setEvent(evt);
-
-        if (evt.is_participating) {
-          const { data: confirmed } = await api.get<User[]>(
-            `/event-participations/event/${id}/confirmed-users`
-          );
-          setUsers(confirmed);
-        }
       } catch (err) {
         console.warn("Erro ao carregar detalhes:", err);
       } finally {
@@ -80,10 +63,6 @@ export default function EventDetail() {
             }
           : e
       );
-      const { data: confirmed } = await api.get<User[]>(
-        `/event-participations/event/${event.id}/confirmed-users`
-      );
-      setUsers(confirmed);
     } catch (err: any) {
       if (err.response?.status === 409) {
         alert("Você já está inscrito neste evento.");
@@ -112,7 +91,6 @@ export default function EventDetail() {
             }
           : e
       );
-      setUsers([]);
     } catch {
       alert("Erro ao cancelar presença. Tente novamente.");
     } finally {
@@ -143,11 +121,11 @@ export default function EventDetail() {
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900">
       <Header />
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-24">
         <img
           src={event.cover_image_url}
           onError={(e) => (e.currentTarget.src = "/placeholder_event.png")}
-          className="w-full h-56 object-cover"
+          className="w-full h-64 object-cover"
           alt={event.title}
         />
 
@@ -161,7 +139,7 @@ export default function EventDetail() {
               <img
                 src={event.partner_logo_url}
                 onError={(e) => (e.currentTarget.style.display = "none")}
-                className="w-6 h-6 rounded-full"
+                className="w-8 h-8 rounded-full"
                 alt={event.partner_name}
               />
               <span className="text-sm text-gray-600">
@@ -189,7 +167,7 @@ export default function EventDetail() {
               <button
                 onClick={handleJoin}
                 disabled={processing}
-                className="flex-1 bg-primary hover:bg-hover text-white font-semibold py-2 rounded-full transition disabled:opacity-50"
+                className="flex-1 bg-primary hover:bg-hover text-white font-semibold py-3 rounded-full transition disabled:opacity-50"
               >
                 {processing ? "Confirmando..." : "Confirmar presença"}
               </button>
@@ -197,7 +175,7 @@ export default function EventDetail() {
               <button
                 onClick={handleCancel}
                 disabled={processing}
-                className="flex-1 border border-primary text-primary font-semibold py-2 rounded-full transition hover:bg-primary/10 disabled:opacity-50"
+                className="flex-1 border border-primary text-primary font-semibold py-3 rounded-full transition hover:bg-primary/10 disabled:opacity-50"
               >
                 {processing ? "Cancelando..." : "Cancelar inscrição"}
               </button>
@@ -210,16 +188,9 @@ export default function EventDetail() {
                 <h2 className="font-semibold mb-2 text-gray-800">
                   Confirmados no evento
                 </h2>
-                <div className="grid grid-cols-3 gap-3">
-                  {users.map((u) => (
-                    <img
-                      key={u.id}
-                      src={u.profile_picture_url || "/avatar_placeholder.png"}
-                      alt={u.nickname}
-                      className="w-full h-24 object-cover rounded-lg"
-                    />
-                  ))}
-                </div>
+                <UserGrid
+                  endpoint={`/event-participations/event/${event.id}/confirmed-users`}
+                />
               </>
             ) : (
               <p className="text-center text-gray-600 mt-4">

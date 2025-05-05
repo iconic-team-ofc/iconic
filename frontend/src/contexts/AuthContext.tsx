@@ -5,10 +5,10 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { loginWithGoogle } from "@/firebase";
 import { api } from "@/lib/api";
+import { loginWithGoogle, handleRedirectLogin } from "@/firebase";
 
-type User = {
+export type User = {
   id: string;
   email: string;
   nickname: string;
@@ -47,15 +47,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async () => {
     const idToken = await loginWithGoogle();
-    if (!idToken) throw new Error("Falha ao autenticar no Google");
-    const res = await api.post<{ access_token: string }>(
-      "/auth/login/firebase",
-      { idToken }
-    );
-    const jwt = res.data.access_token;
-    localStorage.setItem("token", jwt);
-    setToken(jwt);
-    await fetchMe(jwt);
+    if (idToken) {
+      try {
+        const { data } = await api.post<{ access_token: string }>(
+          "/auth/login/firebase",
+          { idToken }
+        );
+        const jwt = data.access_token;
+        localStorage.setItem("token", jwt);
+        setToken(jwt);
+        await fetchMe(jwt);
+      } catch (err) {
+        console.error("Erro trocando token Firebase por JWT:", err);
+      }
+    }
   };
 
   const logout = () => {
@@ -66,21 +71,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     (async () => {
-      if (token) {
-        try {
+      try {
+        const idToken = await handleRedirectLogin();
+        if (idToken) {
+          const { data } = await api.post<{ access_token: string }>(
+            "/auth/login/firebase",
+            { idToken }
+          );
+          const jwt = data.access_token;
+          localStorage.setItem("token", jwt);
+          setToken(jwt);
+          await fetchMe(jwt);
+        } else if (token) {
           await fetchMe(token);
-        } catch {
-          logout();
         }
+      } catch (err) {
+        console.error("Auth initialization error:", err);
+        logout();
+      } finally {
+        setInitialized(true);
       }
-      setInitialized(true);
     })();
   }, []);
 
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-700">Carregando...</p>
+        <p className="text-gray-700">Carregando autenticação...</p>
       </div>
     );
   }
