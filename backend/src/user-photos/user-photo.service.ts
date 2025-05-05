@@ -7,11 +7,20 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserPhotoDto } from './dtos/create-user-photo.dto';
 import { UpdateUserPhotoDto } from './dtos/update-user-photo.dto';
+import { createClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class UserPhotosService {
+  private supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Retorna todas as fotos do usuário, ordenadas por posição.
+   */
   async findAllByUser(userId: string) {
     return this.prisma.userPhoto.findMany({
       where: { user_id: userId },
@@ -19,21 +28,24 @@ export class UserPhotosService {
     });
   }
 
+  /**
+   * Faz upload de uma nova foto, respeitando o limite de 6.
+   */
   async upload(userId: string, dto: CreateUserPhotoDto) {
-    const existingPhotos = await this.prisma.userPhoto.findMany({
+    const existing = await this.prisma.userPhoto.findMany({
       where: { user_id: userId },
       orderBy: { position: 'asc' },
     });
 
-    if (existingPhotos.length >= 6) {
+    if (existing.length >= 6) {
       throw new BadRequestException('Você já atingiu o limite de 6 fotos.');
     }
 
-    const usedPositions = new Set(existingPhotos.map((p) => p.position));
+    const usedPositions = new Set(existing.map((p) => p.position));
     const nextPosition =
       [...Array(6).keys()]
         .map((i) => i + 1)
-        .find((p) => !usedPositions.has(p)) ?? 6;
+        .find((pos) => !usedPositions.has(pos)) ?? 6;
 
     return this.prisma.userPhoto.create({
       data: {
@@ -44,6 +56,9 @@ export class UserPhotosService {
     });
   }
 
+  /**
+   * Atualiza posição ou ordenação de uma foto existente.
+   */
   async update(userId: string, id: string, dto: UpdateUserPhotoDto) {
     const photo = await this.prisma.userPhoto.findUnique({ where: { id } });
     if (!photo) throw new NotFoundException('Photo not found');
@@ -54,6 +69,7 @@ export class UserPhotosService {
     }
 
     if (dto.position) {
+      // Corrige `user_id` para referenciar o parâmetro `userId`
       const conflict = await this.prisma.userPhoto.findFirst({
         where: {
           user_id: userId,
@@ -72,18 +88,35 @@ export class UserPhotosService {
     });
   }
 
+  /**
+   * Remove uma foto, exclui do storage e reordena as posições.
+   */
   async remove(userId: string, id: string) {
     const photo = await this.prisma.userPhoto.findUnique({ where: { id } });
     if (!photo) throw new NotFoundException('Photo not found');
     if (photo.user_id !== userId) throw new ForbiddenException();
 
+    // Remove do Supabase Storage
+    const filename = photo.url.split('/').pop();
+    if (filename) {
+      const path = `${userId}/${filename}`;
+      const { error } = await this.supabase.storage
+        .from('user-photos')
+        .remove([path]);
+      if (error) {
+        console.error('Erro ao deletar foto do storage:', error);
+        throw error;
+      }
+    }
+
+    // Remove do DB
     await this.prisma.userPhoto.delete({ where: { id } });
 
+    // Reordena posições restantes
     const photos = await this.prisma.userPhoto.findMany({
       where: { user_id: userId },
       orderBy: { position: 'asc' },
     });
-
     for (let i = 0; i < photos.length; i++) {
       await this.prisma.userPhoto.update({
         where: { id: photos[i].id },

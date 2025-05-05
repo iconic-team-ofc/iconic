@@ -17,6 +17,9 @@ export class UsersService {
 
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Busca um usuário pelo e-mail, ou cria um novo se não existir.
+   */
   async findOrCreate(data: {
     uid: string;
     email: string;
@@ -25,7 +28,13 @@ export class UsersService {
     phone_number?: string;
     date_of_birth?: Date;
   }) {
-    const { email, full_name, profile_picture_url, phone_number, date_of_birth } = data;
+    const {
+      email,
+      full_name,
+      profile_picture_url,
+      phone_number,
+      date_of_birth,
+    } = data;
 
     let user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -46,25 +55,45 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Retorna um usuário pelo ID.
+   */
   async findById(id: string) {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  /**
+   * Lista todos os usuários.
+   */
   async findAll() {
     return this.prisma.user.findMany();
   }
 
+  /**
+   * Atualiza os dados de um usuário.
+   * Converte date_of_birth de string ISO para Date antes de salvar.
+   */
   async update(id: string, dto: UpdateUserDto) {
+    const data: any = { ...dto };
+    if (dto.date_of_birth) {
+      data.date_of_birth = new Date(dto.date_of_birth);
+    }
     return this.prisma.user.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 
+  /**
+   * Deleta um usuário.
+   */
   async remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
   }
 
+  /**
+   * Deleta usuário e suas fotos, removendo também do bucket Supabase.
+   */
   async removeWithPhotos(id: string) {
     const photos = await this.prisma.userPhoto.findMany({
       where: { user_id: id },
@@ -84,14 +113,13 @@ export class UsersService {
     }
 
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
-
-    await this.prisma.eventParticipation.deleteMany({
-      where: { user_id: id },
-    });
-
+    await this.prisma.eventParticipation.deleteMany({ where: { user_id: id } });
     return this.prisma.user.delete({ where: { id } });
   }
 
+  /**
+   * Promove um usuário a ICONIC.
+   */
   async promoteToIconic(id: string) {
     return this.prisma.user.update({
       where: { id },
@@ -102,6 +130,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Promove um usuário a SCANNER.
+   */
   async promoteToScanner(id: string) {
     return this.prisma.user.update({
       where: { id },
@@ -111,6 +142,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Remove o papel SCANNER de um usuário.
+   */
   async demoteScanner(id: string) {
     return this.prisma.user.update({
       where: { id },
@@ -120,6 +154,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Lista usuários ICONIC válidos.
+   */
   async findIconicUsers() {
     return this.prisma.user.findMany({
       where: {
@@ -131,6 +168,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Lista usuários com perfil público.
+   */
   async findPublicUsers() {
     return this.prisma.user.findMany({
       where: {
@@ -139,6 +179,9 @@ export class UsersService {
     });
   }
 
+  /**
+   * Retorna perfil público completo com até 6 fotos.
+   */
   async getPublicProfileWithPhotos(
     userId: string,
     requesterId: string | null = null,
@@ -148,25 +191,20 @@ export class UsersService {
       include: {
         photos: {
           orderBy: { position: 'asc' },
-          select: {
-            id: true,
-            url: true,
-            position: true,
-          },
+          select: { id: true, url: true, position: true },
         },
       },
     });
 
     if (!user) throw new NotFoundException('User not found');
 
+    // verifica visibilidade
     if (!user.show_public_profile) {
       if (!requesterId) throw new ForbiddenException('Private profile');
-
       const requester = await this.prisma.user.findUnique({
         where: { id: requesterId },
       });
       if (!requester) throw new ForbiddenException();
-
       const isIconicRequester = requester.is_iconic;
       if (!user.show_profile_to_iconics || !isIconicRequester) {
         throw new ForbiddenException('Private profile');
@@ -195,6 +233,9 @@ export class UsersService {
     };
   }
 
+  /**
+   * Atualiza a foto de perfil principal.
+   */
   async updateProfilePicture(userId: string, url: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
