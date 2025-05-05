@@ -102,7 +102,7 @@ export class UserPhotosService {
       const filePath = `${userId}/${filename}`;
       const { error } = await this.supabase.storage
         .from('user-photos')
-        .remove([path]);
+        .remove([filePath]);
       if (error) {
         console.error('Erro ao deletar foto do storage:', error);
         throw error;
