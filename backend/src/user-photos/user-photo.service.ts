@@ -98,12 +98,12 @@ export class UserPhotosService {
     if (photo.user_id !== userId) throw new ForbiddenException();
 
     // Remove do Supabase Storage
-    const filename = photo.url.split('/').pop();
+    const filename = path.basename(new URL(photo.url).pathname);
     if (filename) {
-      const path = `${userId}/${filename}`;
+      const filePath = `${userId}/${filename}`;
       const { error } = await this.supabase.storage
         .from('user-photos')
-        .remove([path]);
+        .remove([filePath]);
       if (error) {
         console.error('Erro ao deletar foto do storage:', error);
         throw error;
