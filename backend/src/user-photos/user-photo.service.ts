@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserPhotoDto } from './dtos/create-user-photo.dto';
 import { UpdateUserPhotoDto } from './dtos/update-user-photo.dto';
 import { createClient } from '@supabase/supabase-js';
+import { basename } from 'path';
 
 @Injectable()
 export class UserPhotosService {
