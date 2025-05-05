@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://iconic-seven.vercel.app'],
+    origin: ['http://localhost:5173', 'http://localhost:4173' ,'https://iconic-seven.vercel.app', 'https://iconicxp.netlify.app'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,
