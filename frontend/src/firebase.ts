@@ -1,6 +1,17 @@
+<<<<<<< Updated upstream
 // src/firebase.ts
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+=======
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+} from "firebase/auth";
+>>>>>>> Stashed changes
 
 const firebaseConfig = {
     apiKey: "AIzaSyCq_C9HbyW7SIfn-_n12iSmu0YVeIqgxKI",
@@ -19,6 +30,7 @@ export const provider = new GoogleAuthProvider();
 export const loginWithGoogle = async (): Promise<string | null> => {
   try {
     const result = await signInWithPopup(auth, provider);
+<<<<<<< Updated upstream
     const idToken = await result.user.getIdToken();
     return idToken;
   } catch (error) {
@@ -26,3 +38,25 @@ export const loginWithGoogle = async (): Promise<string | null> => {
     return null;
   }
 };
+=======
+    return await result.user.getIdToken();
+  } catch (error: any) {
+    console.warn("Popup sign-in failed, falling back to redirect:", error);
+    signInWithRedirect(auth, provider);
+    return null;
+  }
+};
+
+export const handleRedirectLogin = async (): Promise<string | null> => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      return await result.user.getIdToken();
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro ao tratar login via redirect:", error);
+    return null;
+  }
+};
+>>>>>>> Stashed changes

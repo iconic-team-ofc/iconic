@@ -22,7 +22,7 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse,
-  ApiBody
+  ApiBody,
 } from '@nestjs/swagger';
 
 @ApiTags('Users')
@@ -96,6 +96,16 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  // Static route before dynamic to avoid ForbiddenException
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile-picture')
+  @ApiOperation({ summary: 'Update main profile picture' })
+  @ApiBody({ schema: { example: { url: 'https://...' } } })
+  @ApiResponse({ status: 200, description: 'Profile picture updated' })
+  updateProfilePicture(@Req() req, @Body() body: { url: string }) {
+    return this.usersService.updateProfilePicture(req.user.sub, body.url);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update user profile (self or admin)' })
@@ -103,11 +113,9 @@ export class UsersController {
   update(@Req() req, @Param('id') id: string, @Body() dto: UpdateUserDto) {
     const requesterId = req.user.sub;
     const isAdmin = req.user.role === Role.admin;
-
     if (requesterId !== id && !isAdmin) {
       throw new ForbiddenException('Not authorized to update this user');
     }
-
     return this.usersService.update(id, dto);
   }
 
@@ -122,11 +130,9 @@ export class UsersController {
   async remove(@Req() req, @Param('id') id: string) {
     const requesterId = req.user.sub;
     const isAdmin = req.user.role === Role.admin;
-
     if (requesterId !== id && !isAdmin) {
       throw new ForbiddenException('Not authorized to delete this user');
     }
-
     return this.usersService.removeWithPhotos(id);
   }
 
@@ -145,16 +151,7 @@ export class UsersController {
     status: 200,
     description: 'Returns full profile and up to 6 photos',
   })
-  async getPublicProfile(@Param('id') id: string) {
-    return this.usersService.getPublicProfileWithPhotos(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch('profile-picture')
-  @ApiOperation({ summary: 'Update main profile picture' })
-  @ApiBody({ schema: { example: { url: 'https://...' } } })
-  @ApiResponse({ status: 200, description: 'Profile picture updated' })
-  updateProfilePicture(@Req() req, @Body() body: { url: string }) {
-    return this.usersService.updateProfilePicture(req.user.sub, body.url);
+  async getPublicProfile(@Param('id') id: string, @Req() req) {
+    return this.usersService.getPublicProfileWithPhotos(id, req.user.sub);
   }
 }
