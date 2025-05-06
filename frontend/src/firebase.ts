@@ -1,7 +1,9 @@
+// src/firebase.ts
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
 } from "firebase/auth";
@@ -17,14 +19,30 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-// only redirect method to prevent COOP/window.close issues
-export const loginWithGoogle = (): void => {
-  signInWithRedirect(auth, provider);
+/**
+ * Primeiro tenta popup. Se popup falhar (e.g. mobile),
+ * faz redirect e recarrega a página.
+ * @returns idToken (only on successful popup)
+ */
+export const loginWithGoogle = async (): Promise<string> => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return await result.user.getIdToken();
+  } catch (popupError) {
+    console.warn("Popup falhou, fazendo redirect:", popupError);
+    await signInWithRedirect(auth, provider);
+    // não retorna nada aqui porque o redirect recarrega a página
+    return new Promise(() => {});
+  }
 };
 
+/**
+ * No mount do app, captura o resultado do redirect e
+ * retorna o idToken ou null.
+ */
 export const handleRedirectLogin = async (): Promise<string | null> => {
   try {
     const result = await getRedirectResult(auth);
