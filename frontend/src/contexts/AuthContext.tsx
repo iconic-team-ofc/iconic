@@ -1,4 +1,5 @@
 // src/contexts/AuthContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -39,10 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
   const [initialized, setInitialized] = useState(false);
 
-  const fetchMe = async (jwt: string) => {
-    const res = await api.get<User>("/users/me", {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
+  const fetchMe = async () => {
+    const res = await api.get<User>("/users/me");
     setUser(res.data);
   };
 
@@ -54,19 +53,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const jwt = data.access_token;
     localStorage.setItem("token", jwt);
     setToken(jwt);
-    await fetchMe(jwt);
+    api.defaults.headers.common["Authorization"] = `Bearer ${jwt}`;
+    await fetchMe();
   };
 
   const login = async () => {
     try {
-      // tenta popup, se funcionar já retorna o idToken
+      // Tentar popup; se não vier, seguirá para redirect flow
       const idToken = await loginWithGoogle();
       if (idToken) {
         await exchangeAndStoreToken(idToken);
-        // redireciona no cliente sem React Router
         window.location.href = "/";
       }
-      // se for redirect, o fluxo seguirá em handleRedirectLogin()
     } catch (err) {
       console.error("Erro no login:", err);
       throw err;
@@ -77,20 +75,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    // joga pra tela de login
+    delete api.defaults.headers.common["Authorization"];
     window.location.href = "/login";
   };
 
   useEffect(() => {
     (async () => {
       try {
+        // Se veio via redirect OAuth
         const idToken = await handleRedirectLogin();
         if (idToken) {
           await exchangeAndStoreToken(idToken);
-          // só redireciona após troca de token e fetch de usuário
           window.location.href = "/";
-        } else if (token) {
-          await fetchMe(token);
+          return;
+        }
+        // Se já havia token salvo
+        if (token) {
+          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          await fetchMe();
         }
       } catch (err) {
         console.error("Auth init error:", err);
