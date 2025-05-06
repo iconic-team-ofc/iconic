@@ -1,9 +1,12 @@
 // src/router/routes.tsx
+
 import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import EventDetail from "@/pages/EventDetail";
-import Profile from "@/pages/Profile"; // ✅ IMPORTADO AQUI
+import QRCodeScreen from "@/pages/QRCodeScreen";
+import ScannerScreen from "@/pages/ScannerScreen";
+import Profile from "@/pages/Profile";
 import { useAuth } from "@/contexts/AuthContext";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -16,6 +19,7 @@ export function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+
         <Route
           path="/"
           element={
@@ -24,6 +28,7 @@ export function AppRoutes() {
             </PrivateRoute>
           }
         />
+
         <Route
           path="/events/:id"
           element={
@@ -32,6 +37,25 @@ export function AppRoutes() {
             </PrivateRoute>
           }
         />
+
+        <Route
+          path="/events/:id/checkin"
+          element={
+            <PrivateRoute>
+              <QRCodeScreen />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/events/:id/scan"
+          element={
+            <PrivateRoute>
+              <ScannerScreen />
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="/profile"
           element={
