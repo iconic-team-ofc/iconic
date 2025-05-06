@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -45,21 +46,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(res.data);
   };
 
+  const exchangeAndStoreToken = async (idToken: string) => {
+    const { data } = await api.post<{ access_token: string }>(
+      "/auth/login/firebase",
+      { idToken }
+    );
+    const jwt = data.access_token;
+    localStorage.setItem("token", jwt);
+    setToken(jwt);
+    await fetchMe(jwt);
+  };
+
   const login = async () => {
-    const idToken = await loginWithGoogle();
-    if (idToken) {
-      try {
-        const { data } = await api.post<{ access_token: string }>(
-          "/auth/login/firebase",
-          { idToken }
-        );
-        const jwt = data.access_token;
-        localStorage.setItem("token", jwt);
-        setToken(jwt);
-        await fetchMe(jwt);
-      } catch (err) {
-        console.error("Erro trocando token Firebase por JWT:", err);
+    try {
+      // tenta popup, se funcionar já retorna o idToken
+      const idToken = await loginWithGoogle();
+      if (idToken) {
+        await exchangeAndStoreToken(idToken);
+        // redireciona no cliente sem React Router
+        window.location.href = "/";
       }
+      // se for redirect, o fluxo seguirá em handleRedirectLogin()
+    } catch (err) {
+      console.error("Erro no login:", err);
+      throw err;
     }
   };
 
@@ -67,6 +77,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    // joga pra tela de login
+    window.location.href = "/login";
   };
 
   useEffect(() => {
@@ -74,25 +86,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const idToken = await handleRedirectLogin();
         if (idToken) {
-          const { data } = await api.post<{ access_token: string }>(
-            "/auth/login/firebase",
-            { idToken }
-          );
-          const jwt = data.access_token;
-          localStorage.setItem("token", jwt);
-          setToken(jwt);
-          await fetchMe(jwt);
+          await exchangeAndStoreToken(idToken);
+          // só redireciona após troca de token e fetch de usuário
+          window.location.href = "/";
         } else if (token) {
           await fetchMe(token);
         }
       } catch (err) {
-        console.error("Auth initialization error:", err);
+        console.error("Auth init error:", err);
         logout();
       } finally {
         setInitialized(true);
       }
     })();
-  }, []);
+  }, [token]);
 
   if (!initialized) {
     return (
