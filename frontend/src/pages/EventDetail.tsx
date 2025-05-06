@@ -206,6 +206,7 @@ export default function EventDetail() {
 
           {/* Action buttons */}
           <div className="flex flex-col gap-3 mt-6">
+            {/* Join button if not participating */}
             {!event.is_participating ? (
               <button
                 onClick={handleJoin}
@@ -214,14 +215,19 @@ export default function EventDetail() {
               >
                 {processing ? "Confirmando..." : "Confirmar presença"}
               </button>
-            ) : !checkedIn ? (
+            ) : (
               <>
-                <button
-                  onClick={() => navigate(`/events/${event.id}/checkin`)}
-                  className="w-full flex items-center justify-center bg-primary text-white font-semibold py-3 rounded-full transition"
-                >
-                  <QrCode className="w-5 h-5 mr-2" /> QR de Acesso
-                </button>
+                {/* QR de acesso for normal user until check-in */}
+                {!checkedIn && (
+                  <button
+                    onClick={() => navigate(`/events/${event.id}/checkin`)}
+                    className="w-full flex items-center justify-center bg-primary text-white font-semibold py-3 rounded-full transition"
+                  >
+                    <QrCode className="w-5 h-5 mr-2" /> QR de Acesso
+                  </button>
+                )}
+
+                {/* Scanner/Admin always sees scan button */}
                 {canScan && (
                   <button
                     onClick={() => navigate(`/events/${event.id}/scan`)}
@@ -230,16 +236,19 @@ export default function EventDetail() {
                     <Camera className="w-5 h-5 mr-2" /> Modo Scanner
                   </button>
                 )}
-                {/* Cancel hidden until after checkin lives out */}
-                <button
-                  onClick={handleCancel}
-                  disabled={processing}
-                  className="w-full text-center text-sm text-gray-500 underline disabled:opacity-50"
-                >
-                  {processing ? "Cancelando..." : "Cancelar inscrição"}
-                </button>
+
+                {/* Cancel only visible if not yet checked-in */}
+                {!checkedIn && (
+                  <button
+                    onClick={handleCancel}
+                    disabled={processing}
+                    className="w-full text-center text-sm text-gray-500 underline disabled:opacity-50"
+                  >
+                    {processing ? "Cancelando..." : "Cancelar inscrição"}
+                  </button>
+                )}
               </>
-            ) : null}
+            )}
           </div>
 
           {/* Participants Grid */}
