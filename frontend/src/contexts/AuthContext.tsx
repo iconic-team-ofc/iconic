@@ -101,8 +101,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setInitialized(true);
       }
     })();
-  }, [token]);
+  }, []); // Runs only once during initialization
 
+  // Effect to fetch user data when a valid token is set
+  useEffect(() => {
+    if (token) {
+      (async () => {
+        try {
+          await fetchMe(token);
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+          logout();
+        }
+      })();
+    }
+  }, [token]); // Runs whenever the token changes
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
