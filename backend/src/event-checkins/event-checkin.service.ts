@@ -1,3 +1,5 @@
+// src/event-checkins/event-checkin.service.ts
+
 import {
   BadRequestException,
   ConflictException,
@@ -15,13 +17,16 @@ export class EventCheckinService {
   constructor(private readonly prisma: PrismaService) {}
 
   async generate(userId: string, eventId: string) {
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) throw new NotFoundException('Event not found');
 
     const participation = await this.prisma.eventParticipation.findFirst({
       where: { user_id: userId, event_id: eventId, status: 'confirmed' },
     });
-    if (!participation) throw new ForbiddenException('You are not confirmed for this event');
+    if (!participation)
+      throw new ForbiddenException('You are not confirmed for this event');
 
     const alreadyCheckedIn = await this.prisma.eventCheckin.findFirst({
       where: {
@@ -30,7 +35,8 @@ export class EventCheckinService {
         NOT: { checkin_time: new Date(0) },
       },
     });
-    if (alreadyCheckedIn) throw new ConflictException('You have already checked in');
+    if (alreadyCheckedIn)
+      throw new ConflictException('You have already checked in');
 
     const lastPending = await this.prisma.eventCheckin.findFirst({
       where: {
@@ -120,6 +126,35 @@ export class EventCheckinService {
     });
   }
 
+  async getCheckedInUsers(
+    eventId: string,
+    requesterId: string,
+    requesterRole: Role,
+  ) {
+    return this.findCheckedInUsersWithProfiles(
+      eventId,
+      requesterId,
+      requesterRole,
+    );
+  }
+
+  async isUserCheckedIn(userId: string, eventId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) throw new NotFoundException('Evento não encontrado');
+
+    const checkin = await this.prisma.eventCheckin.findFirst({
+      where: {
+        user_id: userId,
+        event_id: eventId,
+        checkin_time: { not: new Date(0) },
+      },
+    });
+
+    return { checkedIn: Boolean(checkin) };
+  }
+
   async delete(checkinId: string) {
     const checkin = await this.prisma.eventCheckin.findUnique({
       where: { id: checkinId },
@@ -181,12 +216,7 @@ export class EventCheckinService {
       const isIconicVisible =
         user.show_profile_to_iconics && requesterRole === 'iconic';
 
-      if (
-        isAdmin ||
-        isPublic ||
-        isIconicVisible ||
-        user.id === requesterId
-      ) {
+      if (isAdmin || isPublic || isIconicVisible || user.id === requesterId) {
         return {
           id: user.id,
           full_name: user.full_name,
