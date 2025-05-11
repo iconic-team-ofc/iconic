@@ -7,6 +7,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
 } from "firebase/auth";
+import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,12 +16,15 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID, // G-XXXXXXX
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+// Inicializa o Analytics
+const analytics = getAnalytics(app);
 
 /**
  * Primeiro tenta popup. Se popup falhar (e.g. mobile),
@@ -34,8 +38,7 @@ export const loginWithGoogle = async (): Promise<string> => {
   } catch (popupError) {
     console.warn("Popup falhou, fazendo redirect:", popupError);
     await signInWithRedirect(auth, provider);
-    // não retorna nada aqui porque o redirect recarrega a página
-    return new Promise(() => {});
+    return new Promise(() => {}); // nunca resolve; recarrega
   }
 };
 
@@ -55,3 +58,5 @@ export const handleRedirectLogin = async (): Promise<string | null> => {
     return null;
   }
 };
+
+export { app, auth, analytics };
