@@ -124,8 +124,8 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: {
-        is_iconic: true,
-        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // 30 dias
+        role: Role.iconic,
+        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
       },
     });
   }
@@ -220,7 +220,9 @@ export class UsersService {
       profile_picture_url,
       is_iconic,
       photos,
+      date_of_birth,
     } = user;
+
     return {
       id,
       full_name,
@@ -230,6 +232,7 @@ export class UsersService {
       profile_picture_url,
       is_iconic,
       photos,
+      date_of_birth,
     };
   }
 

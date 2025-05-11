@@ -40,3 +40,17 @@
 .read-the-docs {
   color: #888;
 }
+
+.iconic-border {
+  padding: 2px;
+  border-radius: 1rem;
+  background: linear-gradient(270deg, #A557F2, #C17FF5, #A557F2);
+  background-size: 600% 600%;
+  animation: gradient-border 4s ease infinite;
+}
+
+@keyframes gradient-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
