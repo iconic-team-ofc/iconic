@@ -1,3 +1,5 @@
+// src/events.service.ts
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dtos/create-event.dto';
@@ -93,12 +95,13 @@ export class EventsService {
     };
   }
 
-  /** Lógica original de recomendação */
+  /** Recomendação com base no tipo de usuário */
   async findRecommendedForUser(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
-    const where = user.is_iconic ? { is_exclusive: true } : { is_public: true };
+    // Iconic vê tudo, users só veem eventos públicos
+    const where = user.is_iconic ? {} : { is_public: true };
 
     return this.prisma.event.findMany({ where });
   }
