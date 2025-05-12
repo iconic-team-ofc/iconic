@@ -139,16 +139,4 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       </div>
     </Dialog>
   );
-};
-
-/* Tailwind config:
-@keyframes gradient-border {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.animate-gradient-border {
-  background-size: 200% 200%;
-  animation: gradient-border 5s ease infinite;
-}
-*/
+};  
