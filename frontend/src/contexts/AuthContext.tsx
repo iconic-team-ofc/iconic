@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setInitialized(true);
       }
     })();
-  }, []); // run once on mount
+  }, [token]); // re-run when token changes
 
   if (!initialized) {
     return (
