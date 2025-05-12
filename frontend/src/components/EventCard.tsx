@@ -159,7 +159,7 @@ export function EventCard({ event }: { event: Event }) {
                 disabled={isSoldOut}
                 className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${participateBtnClass}`}
               >
-                {showLock && <Lock className="w-4 h-4 mr-1" />}
+                {showLock && <Lock className="w-4 h-4 mr-1" aria-label="Restricted access" />}
                 {isSoldOut ? "Esgotado" : "Participar"}
               </button>
             )}
