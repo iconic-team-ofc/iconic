@@ -1,5 +1,3 @@
-// src/contexts/AuthContext.tsx
-
 import React, {
   createContext,
   useContext,
@@ -22,6 +20,7 @@ export type User = {
 interface AuthContextProps {
   user: User | null;
   token: string | null;
+  isIconic: boolean;
   login: () => Promise<void>;
   logout: () => void;
 }
@@ -29,6 +28,7 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   token: null,
+  isIconic: false,
   login: async () => {},
   logout: () => {},
 });
@@ -38,11 +38,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token")
   );
+  const [isIconic, setIsIconic] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   const fetchMe = async () => {
     const res = await api.get<User>("/users/me");
     setUser(res.data);
+    setIsIconic(Boolean(res.data.is_iconic));
   };
 
   const exchangeAndStoreToken = async (idToken: string) => {
@@ -59,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async () => {
     try {
-      // Tentar popup; se não vier, seguirá para redirect flow
       const idToken = await loginWithGoogle();
       if (idToken) {
         await exchangeAndStoreToken(idToken);
@@ -75,6 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setIsIconic(false);
     delete api.defaults.headers.common["Authorization"];
     window.location.href = "/login";
   };
@@ -82,14 +84,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     (async () => {
       try {
-        // Se veio via redirect OAuth
         const idToken = await handleRedirectLogin();
         if (idToken) {
           await exchangeAndStoreToken(idToken);
           window.location.href = "/";
           return;
         }
-        // Se já havia token salvo
         if (token) {
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           await fetchMe();
@@ -101,21 +101,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setInitialized(true);
       }
     })();
-  }, []); // Runs only once during initialization
+  }, []); // run once on mount
 
-  // Effect to fetch user data when a valid token is set
-  useEffect(() => {
-    if (token) {
-      (async () => {
-        try {
-          await fetchMe(token);
-        } catch (err) {
-          console.error("Error fetching user data:", err);
-          logout();
-        }
-      })();
-    }
-  }, [token]); // Runs whenever the token changes
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -125,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isIconic, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
