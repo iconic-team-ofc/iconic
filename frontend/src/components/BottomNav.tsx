@@ -1,23 +1,62 @@
+// src/components/BottomNav.tsx
 import React from "react";
-import { Link } from "react-router-dom";
-import {
-  Home as HomeIcon,
-  Users as UsersIcon,
-  User as UserIcon,
-} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { Home, Activity, Sparkles, Ticket, User } from "lucide-react";
+
+const navItems = [
+  { to: "/", icon: Home, label: "Home" },
+  { to: "/live", icon: Activity, label: "Ao Vivo" },
+  { to: "/iconic-network", icon: Sparkles, label: "Rede" },
+  { to: "/tickets", icon: Ticket, label: "Ingressos" },
+  { to: "/profile", icon: User, label: "Perfil" },
+];
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 w-full border-t border-gray-200 py-3 px-6 flex justify-around bg-gray-50 z-10">
-      <Link to="/" aria-label="Home">
-        <HomeIcon className="w-6 h-6 text-gray-500 hover:text-gray-900 transition" />
-      </Link>
-      <Link to="/users" aria-label="Usuários">
-        <UsersIcon className="w-6 h-6 text-gray-500 hover:text-gray-900 transition" />
-      </Link>
-      <Link to="/profile" aria-label="Perfil">
-        <UserIcon className="w-6 h-6 text-gray-500 hover:text-gray-900 transition" />
-      </Link>
-    </nav>
+    <>
+      {/* Gradiente para ícones e texto ativos */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="iconicGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#A855F7" />
+            <stop offset="50%" stopColor="#EC4899" />
+            <stop offset="100%" stopColor="#A855F7" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <nav className="fixed bottom-0 z-50 w-full bg-white border-t border-gray-200 flex justify-around py-2 sm:hidden">
+        {navItems.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end
+            className="flex flex-col items-center justify-center px-2"
+          >
+            {({ isActive }) => (
+              <>
+                {/* Ícone */}
+                <Icon
+                  stroke={isActive ? "url(#iconicGradient)" : "currentColor"}
+                  className={`w-5 h-5 mb-1 ${
+                    isActive ? "" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                />
+                {/* Texto */}
+                <span
+                  className={`text-xs ${
+                    isActive
+                      ? "text-transparent bg-clip-text bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {label}
+                </span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+    </>
   );
 }
