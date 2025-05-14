@@ -7,7 +7,7 @@ const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/live", icon: Activity, label: "Ao Vivo" },
   { to: "/iconic-network", icon: Sparkles, label: "Rede" },
-  { to: "/", icon: Ticket, label: "Ingressos" },
+  { to: "/tickets", icon: Ticket, label: "Ingressos" },
   { to: "/profile", icon: User, label: "Perfil" },
 ];
 
