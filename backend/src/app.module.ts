@@ -1,8 +1,9 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { CacheModule, CacheInterceptor } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { LoggerModule } from 'nestjs-pino';
 
@@ -18,9 +19,7 @@ import { UserPhotosModule } from './user-photos/user-photo.module';
     ConfigModule.forRoot({ isGlobal: true }),
 
     LoggerModule.forRoot({
-      pinoHttp: {
-        transport: { target: 'pino-pretty' },
-      },
+      pinoHttp: { transport: { target: 'pino-pretty' } },
     }),
 
     ThrottlerModule.forRoot({
@@ -38,6 +37,12 @@ import { UserPhotosModule } from './user-photos/user-photo.module';
     BullModule.registerQueue({ name: 'checkin' }),
     BullModule.registerQueue({ name: 'participation' }),
 
+    // Cache em memória (para produção, troque o store para Redis)
+    CacheModule.register({
+      ttl: 60, // tempo de vida em segundos
+      max: 100, // número máximo de itens
+    }),
+
     AuthModule,
     UsersModule,
     EventsModule,
@@ -46,6 +51,12 @@ import { UserPhotosModule } from './user-photos/user-photo.module';
     UserPhotosModule,
   ],
   providers: [
+    // aplica cache de resposta HTTP em todas as rotas
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CacheInterceptor,
+    },
+    // aplica rate limiting globalmente
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
