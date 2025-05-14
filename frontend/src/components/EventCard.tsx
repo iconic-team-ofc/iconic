@@ -1,14 +1,5 @@
-// src/components/EventCard.tsx
 import React from "react";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  Ticket,
-  Lock,
-  XCircle,
-} from "lucide-react";
+import { Calendar, Clock, MapPin, Ticket, Lock, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEvents, Event } from "@/contexts/EventsContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -100,12 +91,12 @@ export function EventCard({ event }: { event: Event }) {
               (e.currentTarget as HTMLImageElement).src = DefaultCover;
             }}
           />
-          {isMember && !isSoldOut && (
+          {isMember && (
             <span className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
               Inscrito
             </span>
           )}
-          {isSoldOut && (
+          {!isMember && isSoldOut && (
             <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded">
               Esgotado
             </span>
@@ -140,32 +131,54 @@ export function EventCard({ event }: { event: Event }) {
             </span>
           </div>
 
-          <div className={`${infoTextClass} text-xs mt-1`}>
-            {!isSoldOut ? (
+          {/* Mostra vagas restantes somente se o user não está inscrito e não está esgotado */}
+          {!isMember && !isSoldOut && (
+            <div className={`${infoTextClass} text-xs mt-1`}>
               <div className="flex items-center gap-1">
                 <Ticket className="w-4 h-4" /> {remaining} vagas restantes
               </div>
-            ) : (
-              <div className="flex items-center gap-1 text-red-400 font-semibold">
-                <XCircle className="w-4 h-4" /> Sem vagas disponíveis
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="mt-4 flex gap-2">
-            {!isMember && (
-              <button
-                onClick={handleParticipation}
-                disabled={isSoldOut}
-                className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${participateBtnClass}`}
-              >
-                {showLock && <Lock className="w-4 h-4 mr-1" aria-label="Restricted access" />}
-                {isSoldOut ? "Esgotado" : "Participar"}
-              </button>
+            {isMember ? (
+              <>
+                <button
+                  disabled
+                  className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-300 text-gray-500 cursor-not-allowed"
+                >
+                  Inscrito
+                </button>
+                <Link to={`/events/${event.id}`} className={detailBtnClass}>
+                  Ver Detalhes
+                </Link>
+              </>
+            ) : (
+              <>
+                {!isSoldOut && (
+                  <button
+                    onClick={handleParticipation}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${participateBtnClass}`}
+                  >
+                    {showLock && (
+                      <Lock
+                        className="w-4 h-4 mr-1"
+                        aria-label="Restricted access"
+                      />
+                    )}
+                    Participar
+                  </button>
+                )}
+                <Link to={`/events/${event.id}`} className={detailBtnClass}>
+                  Ver Detalhes
+                </Link>
+                {isSoldOut && (
+                  <span className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-200 text-gray-400 text-center cursor-not-allowed">
+                    Esgotado
+                  </span>
+                )}
+              </>
             )}
-            <Link to={`/events/${event.id}`} className={detailBtnClass}>
-              Ver Detalhes
-            </Link>
           </div>
         </div>
       </div>

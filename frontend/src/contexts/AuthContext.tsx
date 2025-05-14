@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -6,7 +7,13 @@ import React, {
   ReactNode,
 } from "react";
 import { api } from "@/lib/api";
-import { loginWithGoogle, handleRedirectLogin } from "@/firebase";
+import { loginWithGoogle } from "@/firebase";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut,
+  User as FirebaseUser,
+} from "firebase/auth";
 
 export type User = {
   id: string;
@@ -22,7 +29,7 @@ interface AuthContextProps {
   token: string | null;
   isIconic: boolean;
   login: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -30,10 +37,11 @@ const AuthContext = createContext<AuthContextProps>({
   token: null,
   isIconic: false,
   login: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const auth = getAuth();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token")
@@ -54,54 +62,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     const jwt = data.access_token;
     localStorage.setItem("token", jwt);
+    sessionStorage.setItem("firebase-authenticated", "true");
     setToken(jwt);
     api.defaults.headers.common["Authorization"] = `Bearer ${jwt}`;
     await fetchMe();
   };
 
   const login = async () => {
-    try {
-      const idToken = await loginWithGoogle();
-      if (idToken) {
-        await exchangeAndStoreToken(idToken);
-        window.location.href = "/";
-      }
-    } catch (err) {
-      console.error("Erro no login:", err);
-      throw err;
+    // dispara o fluxo de login do Firebase (popup ou redirect)
+    const idToken = await loginWithGoogle();
+    if (idToken) {
+      await exchangeAndStoreToken(idToken);
+      // não precisa mais de window.location.reload(), o listener cuidará de atualizar o estado
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // limpa tokens e state
     localStorage.removeItem("token");
+    sessionStorage.removeItem("firebase-authenticated");
     setToken(null);
     setUser(null);
     setIsIconic(false);
     delete api.defaults.headers.common["Authorization"];
-    window.location.href = "/login";
+    await signOut(auth);
   };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const idToken = await handleRedirectLogin();
-        if (idToken) {
-          await exchangeAndStoreToken(idToken);
-          window.location.href = "/";
-          return;
+    // Se já estivermos autenticados nesta session, definimos o header e buscamos o perfil
+    const prevAuth = sessionStorage.getItem("firebase-authenticated");
+    if (prevAuth && token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      fetchMe().finally(() => setInitialized(true));
+    } else {
+      // Senão, escutamos o estado de autenticação do Firebase
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        async (fbUser: FirebaseUser | null) => {
+          if (fbUser) {
+            try {
+              const idToken = await fbUser.getIdToken();
+              await exchangeAndStoreToken(idToken);
+            } catch {
+              // falha no token, força logout
+              await logout();
+            }
+          }
+          setInitialized(true);
         }
-        if (token) {
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          await fetchMe();
-        }
-      } catch (err) {
-        console.error("Auth init error:", err);
-        logout();
-      } finally {
-        setInitialized(true);
-      }
-    })();
-  }, [token]); // re-run when token changes
+      );
+      return unsubscribe;
+    }
+  }, [token]);
 
   if (!initialized) {
     return (
