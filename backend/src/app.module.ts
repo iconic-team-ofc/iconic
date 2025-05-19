@@ -13,6 +13,7 @@ import { EventsModule } from './events/events.module';
 import { EventParticipationModule } from './event-participations/event-participation.module';
 import { EventCheckinModule } from './event-checkins/event-checkin.module';
 import { UserPhotosModule } from './user-photos/user-photo.module';
+import { IconicModule } from './iconic/iconic.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { UserPhotosModule } from './user-photos/user-photo.module';
     EventParticipationModule,
     EventCheckinModule,
     UserPhotosModule,
+    IconicModule,
   ],
   providers: [
     // aplica cache de resposta HTTP em todas as rotas

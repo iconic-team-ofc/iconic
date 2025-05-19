@@ -127,4 +127,28 @@ export class EventsService {
       participation_id: map.get(e.id),
     }));
   }
+
+  // Lista todos eventos em que o usuário está participando
+  async findParticipating(userId: string) {
+    const participations = await this.prisma.eventParticipation.findMany({
+      where: {
+        user_id: userId,
+        status: 'confirmed',
+      },
+      select: { event_id: true, id: true },
+    });
+
+    const eventIds = participations.map((p) => p.event_id);
+
+    const events = await this.prisma.event.findMany({
+      where: { id: { in: eventIds } },
+    });
+
+    // Marcar participação igual ao recommended
+    return events.map((e) => ({
+      ...e,
+      is_participating: true,
+      participation_id: participations.find((p) => p.event_id === e.id)?.id,
+    }));
+  }
 }
