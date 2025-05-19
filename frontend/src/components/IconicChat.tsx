@@ -10,7 +10,6 @@ type ChatMessage = {
   message: string;
   created_at: string;
   nickname: string;
-  full_name?: string;
   profile_picture_url?: string;
 };
 
@@ -23,22 +22,19 @@ export function IconicChat() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Fetch initial chat messages once
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const { data } = await api.get<ChatMessage[]>("/iconic/chat");
         setMessages(data.reverse());
-      } catch (err) {
-        console.error(err);
-      } finally {
+      } catch {}
+      finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -50,7 +46,6 @@ export function IconicChat() {
     const text = message.trim();
     try {
       await api.post("/iconic/chat", { message: text });
-      setMessage("");
       setMessages((prev) => [
         ...prev,
         {
@@ -62,9 +57,9 @@ export function IconicChat() {
           profile_picture_url: user.profile_picture_url || "",
         },
       ]);
-    } catch (err) {
-      console.error(err);
-    } finally {
+      setMessage("");
+    } catch {}
+    finally {
       setSending(false);
     }
   };
@@ -73,85 +68,79 @@ export function IconicChat() {
     try {
       const { data } = await api.get(`/users/public/${user_id}`);
       setSelectedUser(data);
-    } catch (err) {
-      console.error("Erro ao carregar perfil:", err);
-    }
+    } catch {}
   };
   const closeModal = () => setSelectedUser(null);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-inner border overflow-hidden">
-      {/* Header */}
+    <div className="flex flex-col h-full min-h-0 bg-white rounded-xl shadow-inner border overflow-hidden">
+      {/* Header do chat */}
       <div className="flex-none px-4 py-2 border-b bg-gray-100">
         <h2 className="text-[11px] font-semibold text-gray-600 text-center tracking-wide uppercase">
           ICONIC CHAT
         </h2>
       </div>
-
-      {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50">
+      {/* Área de mensagens */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 bg-gray-50">
         {loading && (
           <p className="text-gray-400 text-center">Carregando mensagens…</p>
         )}
         {!loading && messages.length === 0 && (
           <p className="text-gray-400 text-center">Seja o primeiro a falar!</p>
         )}
-        {!loading &&
-          messages.map((msg) => {
-            const isMe = msg.nickname === user.nickname;
-            return (
-              <div
-                key={msg.id}
-                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-              >
-                {/* Avatar */}
+        {messages.map((msg) => {
+          const isMe = msg.nickname === user.nickname;
+          return (
+            <div
+              key={msg.id}
+              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+            >
+              {!isMe && (
+                <img
+                  onClick={() => openProfile(msg.user_id)}
+                  src={msg.profile_picture_url || "/avatar_placeholder.png"}
+                  alt={msg.nickname}
+                  className="w-8 h-8 rounded-full border border-gray-200 mr-2 cursor-pointer"
+                />
+              )}
+              <div className="max-w-[80vw]">
                 {!isMe && (
-                  <img
-                    onClick={() => openProfile(msg.user_id)}
-                    src={msg.profile_picture_url || "/avatar_placeholder.png"}
-                    alt={msg.nickname}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200 mr-2 cursor-pointer"
-                  />
-                )}
-                {/* Bubble + meta */}
-                <div className="max-w-[80vw]">
-                  {!isMe && (
-                    <span className="text-xs text-gray-500 block mb-0.5">
-                      @{msg.nickname}
-                    </span>
-                  )}
-                  <div
-                    className={`px-3 py-1.5 rounded-xl text-sm leading-tight ${
-                      isMe
-                        ? "bg-purple-500 text-white"
-                        : "bg-white border border-gray-200 text-gray-800"
-                    }`}
-                    style={{ wordBreak: "break-word" }}
-                  >
-                    {msg.message}
-                  </div>
-                  <span
-                    className={`text-2xs text-gray-400 block ${
-                      isMe ? "text-right" : ""
-                    }`}
-                  >
-                    {new Date(msg.created_at).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                  <span className="text-xs text-gray-500 block mb-0.5">
+                    @{msg.nickname}
                   </span>
-                </div>
-                {isMe && (
-                  <img
-                    onClick={() => openProfile(msg.user_id)}
-                    src={msg.profile_picture_url || "/avatar_placeholder.png"}
-                    alt={msg.nickname}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200 ml-2 cursor-pointer"
-                  />
                 )}
+                <div
+                  className={`px-3 py-1.5 rounded-xl text-sm leading-tight ${
+                    isMe
+                      ? "bg-purple-500 text-white"
+                      : "bg-white border border-gray-200 text-gray-800"
+                  }`}
+                  style={{ wordBreak: "break-word" }}
+                >
+                  {msg.message}
+                </div>
+                <span
+                  className={`text-2xs text-gray-400 block ${
+                    isMe ? "text-right" : ""
+                  }`}
+                >
+                  {new Date(msg.created_at).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </div>
-            );
-          })}
+              {isMe && (
+                <img
+                  onClick={() => openProfile(msg.user_id)}
+                  src={msg.profile_picture_url || "/avatar_placeholder.png"}
+                  alt={msg.nickname}
+                  className="w-8 h-8 rounded-full border border-gray-200 ml-2 cursor-pointer"
+                />
+              )}
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
       {/* Input */}
@@ -176,14 +165,10 @@ export function IconicChat() {
           <Send className="w-4 h-4" />
         </button>
       </form>
-      {/* Profile Modal */}
       {selectedUser && (
-        <UserProfileModal
-          isOpen={!!selectedUser}
-          onClose={closeModal}
-          user={selectedUser}
-        />
+        <UserProfileModal isOpen onClose={closeModal} user={selectedUser} />
       )}
     </div>
   );
 }
+  
