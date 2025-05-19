@@ -7,7 +7,10 @@ import QRCodeScreen from "@/pages/QRCodeScreen";
 import ScannerScreen from "@/pages/ScannerScreen";
 import Profile from "@/pages/Profile";
 import { useAuth } from "@/contexts/AuthContext";
-import { AnalyticsObserver } from "@/components/AnalyticsObserver";  
+import { AnalyticsObserver } from "@/components/AnalyticsObserver";
+import TicketsPage from "@/pages/TicketsPage";
+import IconicNetworkPage from "@/pages/IconicNetworkPage";
+
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { token } = useAuth();
   return token ? children : <Navigate to="/login" replace />;
@@ -53,6 +56,24 @@ export function AppRoutes() {
           element={
             <PrivateRoute>
               <ScannerScreen />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/tickets"
+          element={
+            <PrivateRoute>
+              <TicketsPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/iconic-network"
+          element={
+            <PrivateRoute>
+              <IconicNetworkPage />
             </PrivateRoute>
           }
         />
