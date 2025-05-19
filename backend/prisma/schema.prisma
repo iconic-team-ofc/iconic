@@ -37,10 +37,10 @@ model User {
   checkins                  EventCheckin[]
   admin_checkins            EventCheckin[] @relation("AdminCheckin")
   photos                    UserPhoto[]
+  iconicChatMessages        IconicChatMessage[] // <--- NOVO: Chat dos Iconics
 
   @@map("User")
 }
-
 
 model UserPhoto {
   id         String   @id @default(uuid())
@@ -51,28 +51,28 @@ model UserPhoto {
 
   user       User     @relation(fields: [user_id], references: [id])
 
-  @@unique([user_id, url])        // Evita duplicação de URLs por usuário
-  @@unique([user_id, position])   // Garante posição única de 1 a 6
+  @@unique([user_id, url])
+  @@unique([user_id, position])
 }
 
 model Event {
-  id               String   @id @default(uuid())
-  title            String   @db.VarChar(120)
-  description      String
-  location         String   @db.VarChar(200)
-  date             DateTime
-  time             DateTime
-  category         EventCategory
-  is_exclusive     Boolean
-  is_public        Boolean  @default(false)
-  max_attendees    Int
+  id                String   @id @default(uuid())
+  title             String   @db.VarChar(120)
+  description       String
+  location          String   @db.VarChar(200)
+  date              DateTime
+  time              DateTime
+  category          EventCategory
+  is_exclusive      Boolean
+  is_public         Boolean  @default(false)
+  max_attendees     Int
   current_attendees Int      @default(0)
-  partner_name     String?  @db.VarChar(100)
-  partner_logo_url String?
-  cover_image_url  String
-  created_at       DateTime @default(now())
-  participations   EventParticipation[]
-  checkins         EventCheckin[]
+  partner_name      String?  @db.VarChar(100)
+  partner_logo_url  String?
+  cover_image_url   String
+  created_at        DateTime @default(now())
+  participations    EventParticipation[]
+  checkins          EventCheckin[]
 }
 
 model EventParticipation {
@@ -99,6 +99,15 @@ model EventCheckin {
   event                Event    @relation(fields: [event_id], references: [id])
   user                 User     @relation(fields: [user_id], references: [id])
   scanned_by           User?    @relation("AdminCheckin", fields: [scanned_by_admin_id], references: [id])
+}
+
+model IconicChatMessage {
+  id         String   @id @default(uuid())
+  user_id    String
+  message    String
+  created_at DateTime @default(now())
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 enum EventCategory {

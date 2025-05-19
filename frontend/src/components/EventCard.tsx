@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Clock, MapPin, Ticket, Lock, XCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, Ticket, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEvents, Event } from "@/contexts/EventsContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -81,7 +81,7 @@ export function EventCard({ event }: { event: Event }) {
 
   return (
     <>
-      <div className={`w-full ${bgClass} rounded-xl overflow-hidden mb-6`}>
+      <div className={`w-full ${bgClass} rounded-xl overflow-hidden`}>
         <div className="relative">
           <img
             className="w-full h-44 object-cover"

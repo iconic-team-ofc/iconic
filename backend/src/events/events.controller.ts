@@ -37,7 +37,7 @@ export class EventsController {
   create(@Body() dto: CreateEventDto) {
     return this.eventsService.create(dto);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Get('public')
   @ApiOperation({ summary: 'List all public events' })
@@ -62,6 +62,14 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'Recommended events for user' })
   findRecommended(@Req() req) {
     return this.eventsService.findRecommendedWithParticipation(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('participating')
+  @ApiOperation({ summary: 'List all events the user is participating in' })
+  @ApiResponse({ status: 200, description: 'List of participating events' })
+  findParticipating(@Req() req) {
+    return this.eventsService.findParticipating(req.user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
