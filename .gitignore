@@ -54,3 +54,6 @@ frontend/.env.*
 # ✅ GIT
 .git/
 .obsidian/
+
+# Proteja a chave Firebase Admin
+src/config/firebase-service-account.json
