@@ -16,15 +16,23 @@ export default function Login() {
       await login();
       navigate("/");
     } catch {
-      alert("Erro ao fazer login com Google");
+      alert("Failed to log in with Google.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-evenly items-center bg-gray-50 px-6">
-      {/* Título com gradiente animado */}
+    <div className="min-h-screen flex flex-col justify-evenly items-center bg-gray-50 px-6 relative">
+      {/* Desktop advisory: open on mobile */}
+      <div className="hidden sm:block absolute top-4 left-0 w-full flex justify-center">
+        <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg shadow text-sm font-medium max-w-md text-center border border-yellow-200">
+          For the best ICONIC experience, please open this app on your mobile
+          device.
+        </div>
+      </div>
+
+      {/* Animated gradient title */}
       <h1
         className="
           text-5xl sm:text-6xl font-extrabold uppercase text-transparent bg-clip-text
@@ -37,17 +45,22 @@ export default function Login() {
 
       {/* Slogan */}
       <p className="text-gray-700 text-center max-w-md leading-relaxed">
-        Transforme desejos e gostos em <strong>momentos memoráveis</strong>.<br />
-        <span className="font-semibold">Viva o que é ICÔNICO.</span>
+        Turn your wishes and style into <strong>memorable moments</strong>.
+        <br />
+        <span className="font-semibold">Experience what is ICONIC.</span>
       </p>
 
-      {/* Botão de login Google */}
+      {/* Google Login Button */}
       <button
         onClick={handleLogin}
         disabled={loading}
         className={`
           w-full max-w-xs flex items-center justify-center gap-3
-          ${loading ? "bg-gray-200 cursor-not-allowed" : "bg-white hover:bg-gray-100"}
+          ${
+            loading
+              ? "bg-gray-200 cursor-not-allowed"
+              : "bg-white hover:bg-gray-100"
+          }
           border border-gray-300 text-gray-800 font-medium
           py-3 rounded-full shadow-sm
           focus:outline-none focus:ring-2 focus:ring-primary
@@ -57,8 +70,31 @@ export default function Login() {
         {!loading && (
           <img src={GoogleLogo} alt="Google logo" className="w-5 h-5" />
         )}
-        {loading ? "Entrando..." : "Entrar com Google"}
+        {loading ? "Signing in..." : "Sign in with Google"}
       </button>
+
+      {/* Powered by Sui Blockchain */}
+      <div className="mt-6 text-xs text-gray-500 flex flex-col items-center gap-1">
+        <span>
+          <strong>Powered by Sui Blockchain</strong>
+        </span>
+        <span>
+          <em>
+            Note: Sometimes it may take a few seconds to log in, due to
+            free-tier backend pooling.
+          </em>
+        </span>
+      </div>
+      <style>{`
+        @keyframes gradient-pan {
+          0%,100% {background-position:0% 50%;}
+          50%{background-position:100% 50%;}
+        }
+        .animate-gradient-pan {
+          background-size: 200% 200%;
+          animation: gradient-pan 4s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
