@@ -197,7 +197,7 @@ Our passionate and multidisciplinary team combines expertise in blockchain devel
 - **GitHub Repository**: [github.com/iconic-team-ofc/iconic](https://github.com/iconic-team-ofc/iconic)
 - **Pitch Deck**: [Google Drive](https://drive.google.com/drive/folders/1dObvPZSFN1iL5Bf8d0ThJO20wS9cuBBa?usp=sharing)
 - **X (Twitter)**: [x.com/iconic_xp](https://x.com/iconic_xp)
-- **DEMO VIDEO**:[DEMO VIDEO](www.youtube.com/watch?feature=shared&v=CDTBchRFWGE)
+- **DEMO VIDEO**:[www.youtube.com/watch?feature=shared&v=CDTBchRFWGE](www.youtube.com/watch?feature=shared&v=CDTBchRFWGE)
 ---
 
 <div align="center">
