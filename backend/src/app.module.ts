@@ -14,7 +14,7 @@ import { EventParticipationModule } from './event-participations/event-participa
 import { EventCheckinModule } from './event-checkins/event-checkin.module';
 import { UserPhotosModule } from './user-photos/user-photo.module';
 import { IconicModule } from './iconic/iconic.module';
-import { PaymentModule } from '../payment/payment.module';
+import { PaymentModule } from './payment/payment.module';
 
 // Import do módulo e guard de Sui
 import { SuiModule } from './sui/sui.module';
