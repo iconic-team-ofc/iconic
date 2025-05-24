@@ -1,11 +1,11 @@
 # ICONIC
 
 <div align="center">
-  <img src="./assets/iconic_logo.jpg" alt="ICONIC Logo" width="300"/>
+  <img src="./iconic_logo.jpg" alt="ICONIC Logo" width="300"/>
   <h3>Turning wishes and style into memorable moments</h3>
   <p>A revolutionary platform built on Sui blockchain for the media and entertainment industry</p>
   
-  [![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://iconic-seven.vercel.app)
+  [![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://iconicxp.netlify.app)
   [![X](https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/iconic_xp)
   [![Sui](https://img.shields.io/badge/Sui-6B4CD3?style=for-the-badge&logo=sui&logoColor=white)](https://sui.io/)
 </div>
