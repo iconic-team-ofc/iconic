@@ -28,7 +28,7 @@ export default function Profile() {
   const [user, setUser] = useState<User | null>(null);
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [phoneCode, setPhoneCode] = useState("55");
+  const [phoneCode, setPhoneCode] = useState("1");
   const [phoneNumber, setPhoneNumber] = useState("");
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function Profile() {
         if (data.phone_number) {
           const digits = data.phone_number.replace(/\D/g, "");
           const code =
-            digits.length > 11 ? digits.slice(0, digits.length - 11) : "55";
+            digits.length > 11 ? digits.slice(0, digits.length - 11) : "1";
           const number = digits.slice(-11);
           setPhoneCode(code);
           setPhoneNumber(number);
@@ -50,7 +50,7 @@ export default function Profile() {
         const photosRes = await api.get<UserPhoto[]>("/user-photos");
         setPhotos(photosRes.data);
       } catch (err) {
-        console.error("Erro ao carregar perfil:", err);
+        console.error("Error loading profile:", err);
       } finally {
         setLoading(false);
       }
@@ -103,11 +103,11 @@ export default function Profile() {
         dto.phone_number = `+${phoneCode}${phoneNumber}`;
       }
       await api.patch(`/users/${user.id}`, dto);
-      alert("Perfil atualizado com sucesso!");
+      alert("Profile updated successfully!");
     } catch (error: any) {
-      console.error("Erro ao salvar:", error.response?.data || error);
+      console.error("Error updating profile:", error.response?.data || error);
       alert(
-        "Erro ao atualizar perfil. Verifique seus dados e tente novamente.\n" +
+        "Failed to update profile. Please check your data and try again.\n" +
           (error.response?.data?.message || "")
       );
     }
@@ -122,7 +122,7 @@ export default function Profile() {
     try {
       await validateImage(file);
     } catch {
-      alert("Arquivo de imagem inválido ou corrompido.");
+      alert("Invalid or corrupted image file.");
       return;
     }
     const ext = file.name.split(".")?.pop();
@@ -132,7 +132,7 @@ export default function Profile() {
       .from("user-photos")
       .upload(path, file);
     if (error) {
-      alert("Falha no upload da imagem.");
+      alert("Image upload failed.");
       return;
     }
     const { data } = supabase.storage.from("user-photos").getPublicUrl(path);
@@ -148,25 +148,25 @@ export default function Profile() {
   };
 
   const handlePhotoDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta foto?")) return;
+    if (!confirm("Are you sure you want to delete this photo?")) return;
     try {
       await api.delete(`/user-photos/${id}`);
       setPhotos((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error("Erro ao apagar foto:", err);
-      alert("Falha ao excluir foto.");
+      console.error("Error deleting photo:", err);
+      alert("Failed to delete photo.");
     }
   };
 
   if (loading || !user) {
-    return <p className="p-4">Carregando perfil...</p>;
+    return <p className="p-4">Loading profile...</p>;
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
       <div className="flex-1 overflow-auto p-4 space-y-6 pb-24">
-        <h1 className="text-2xl font-extrabold text-primary">Meu Perfil</h1>
+        <h1 className="text-2xl font-extrabold text-primary">My Profile</h1>
 
         <div className="flex justify-center mb-4">
           <div className="relative w-24 h-32">
@@ -190,21 +190,21 @@ export default function Profile() {
         <div className="space-y-4">
           {[
             {
-              label: "Nome completo",
+              label: "Full Name",
               name: "full_name",
-              placeholder: "Digite seu nome completo",
+              placeholder: "Enter your full name",
               value: user.full_name,
             },
             {
-              label: "Apelido",
+              label: "Nickname",
               name: "nickname",
-              placeholder: "Como prefere ser chamado?",
+              placeholder: "What should we call you?",
               value: user.nickname,
             },
             {
               label: "Instagram",
               name: "instagram",
-              placeholder: "@seuuser",
+              placeholder: "@yourhandle",
               value: user.instagram || "",
             },
           ].map((field) => (
@@ -224,7 +224,7 @@ export default function Profile() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Telefone
+              Phone Number
             </label>
             <div className="flex gap-2">
               <input
@@ -254,7 +254,7 @@ export default function Profile() {
             </label>
             <textarea
               name="bio"
-              placeholder="Conte algo sobre você..."
+              placeholder="Tell us something about you..."
               value={user.bio || ""}
               onChange={handleChange}
               className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
@@ -264,7 +264,7 @@ export default function Profile() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Data de nascimento
+              Date of Birth
             </label>
             <input
               name="date_of_birth"
@@ -289,7 +289,7 @@ export default function Profile() {
               ) : (
                 <Circle className="w-5 h-5 text-gray-400" />
               )}
-              Exibir público
+              Show profile publicly
             </button>
             <button
               onClick={() =>
@@ -309,7 +309,7 @@ export default function Profile() {
               ) : (
                 <Circle className="w-5 h-5 text-gray-400" />
               )}
-              Mostrar na rede ICONIC
+              Show in ICONIC network
             </button>
           </div>
 
@@ -317,13 +317,13 @@ export default function Profile() {
             onClick={handleSave}
             className="w-full bg-primary text-white py-3 rounded-xl font-semibold mt-4"
           >
-            Salvar alterações
+            Save changes
           </button>
         </div>
 
         <div className="mt-8">
           <h2 className="font-semibold mb-2 text-gray-800">
-            Minhas Fotos ({photos.length}/6)
+            My Photos ({photos.length}/6)
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
@@ -342,7 +342,7 @@ export default function Profile() {
             ))}
             {photos.length < 6 && (
               <label className="cursor-pointer flex items-center justify-center border-2 border-dashed rounded-xl h-32 bg-white text-gray-500">
-                <span className="text-sm">+ Adicionar</span>
+                <span className="text-sm">+ Add</span>
                 <input
                   type="file"
                   accept="image/*"

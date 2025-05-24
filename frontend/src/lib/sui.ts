@@ -8,27 +8,35 @@ export function usePaywall() {
   async function payFee(amountSui: number) {
     console.log('Wallet chain id:', chain?.id);
     const amount = BigInt(Math.floor(amountSui * 1e9));
+    const paywallAddress = import.meta.env.VITE_PAYWALL_ADDRESS!;
+    console.log('Paywall address:', paywallAddress, '| Amount:', amount.toString());
+
     const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amount)]);
-    tx.transferObjects([coin], tx.pure.address(import.meta.env.VITE_PAYWALL_ADDRESS!));
+    tx.transferObjects([coin], tx.pure.address(paywallAddress));
 
-    const result = await signAndExecuteTransactionBlock({
-      transactionBlock: tx,
-      chain: chain?.id,         // e.g. "sui:testnet"
-      gasBudget: 200_000,       // aumentado para teste
-      options: { showEffects: true },
-    });
-
-    console.log('rawEffects:', result.rawEffects);
-
-    // Verifica o status da transação
-    if (result.effects?.status.status !== 'success') {
-      console.error('Sui transaction failed:', result.effects?.status);
-      throw new Error('Falha na transação Sui: ' + (result.effects?.status.error || 'Status desconhecido'));
+    let result;
+    try {
+      result = await signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+        chain: chain?.id,
+        gasBudget: 200_000,
+        options: { showEffects: true },
+      });
+      console.log('Sui signAndExecuteTransactionBlock result:', result);
+    } catch (err: any) {
+      console.error('Erro na wallet ou envio Sui:', err);
+      throw new Error('Erro na assinatura ou execução Sui: ' + (err.message || err));
     }
 
-    // Retorna o digest apenas se a transação foi bem-sucedida
-    return result.digest;
+    // ALTERAÇÃO PRINCIPAL: se vier digest, retorna! (mesmo que não venha effects)
+    if (result.digest) {
+      return result.digest;
+    }
+    throw new Error(
+      'Falha na transação Sui: digest ausente. \n' +
+        (result.rawEffects ? JSON.stringify(result.rawEffects) : '')
+    );
   }
 
   return { payFee };

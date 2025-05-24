@@ -30,14 +30,19 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
     ? "bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 animate-gradient-pan shadow-lg"
     : "bg-white shadow-lg";
 
-  const textClass = isPremiumClosed || isExclusiveOpen ? "text-white" : "text-gray-800";
-  const descClass = isPremiumClosed || isExclusiveOpen ? "text-white/90" : "text-gray-600";
-  const infoTextClass = isPremiumClosed || isExclusiveOpen ? "text-white/70" : "text-gray-500";
+  const textClass =
+    isPremiumClosed || isExclusiveOpen ? "text-white" : "text-gray-800";
+  const descClass =
+    isPremiumClosed || isExclusiveOpen ? "text-white/90" : "text-gray-600";
+  const infoTextClass =
+    isPremiumClosed || isExclusiveOpen ? "text-white/70" : "text-gray-500";
 
   const soldOutBtn = "bg-gray-200 text-gray-400 cursor-not-allowed";
-  const lockedBtn = "bg-white/20 text-white hover:bg-white/30 flex items-center justify-center gap-1";
+  const lockedBtn =
+    "bg-white/20 text-white hover:bg-white/30 flex items-center justify-center gap-1";
   const standardBtn = "bg-primary text-white hover:bg-hover";
-  const premiumBtn = "bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-400 text-white hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-300";
+  const premiumBtn =
+    "bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-400 text-white hover:from-yellow-500 hover:via-yellow-400 hover:to-yellow-300";
 
   let participateBtnClass = soldOutBtn;
   if (!isSoldOut) {
@@ -54,22 +59,21 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
   const handleParticipation = () => {
     if (!canAccess) {
       const msg = isPremiumClosed
-        ? "Evento premium fechado: exclusivo para membros ICONIC."
-        : "Passe ICONIC necessário para participar deste evento.";
+        ? "Premium closed event: exclusive to ICONIC members."
+        : "ICONIC pass required to join this event.";
       toast.error(msg, { position: "top-center", autoClose: 4000 });
       return;
     }
-    // Chame a função de participação definida no contexto
-    // useEvents().participate(event.id)
+    // Call your participation logic here if needed
   };
 
   const dt = new Date(event.date);
-  const dateStr = dt.toLocaleDateString("pt-BR", {
+  const dateStr = dt.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  const timeStr = dt.toLocaleTimeString("pt-BR", {
+  const timeStr = dt.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -88,25 +92,29 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
           />
           {isMember && (
             <span className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
-              Inscrito
+              Registered
             </span>
           )}
           {!isMember && isSoldOut && (
             <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded">
-              Esgotado
+              Sold Out
             </span>
           )}
         </div>
 
         <div className="p-4 space-y-2">
-          <h3 className={`text-lg font-semibold ${textClass}`}>{event.title}</h3>
-          <p className={`${descClass} text-sm line-clamp-2`}>{event.description}</p>
+          <h3 className={`text-lg font-semibold ${textClass}`}>
+            {event.title}
+          </h3>
+          <p className={`${descClass} text-sm line-clamp-2`}>
+            {event.description}
+          </p>
 
           {(isPremiumClosed || isExclusiveOpen) && (
             <p className="text-xs italic font-medium text-white/80">
               {isPremiumClosed
-                ? "Evento premium fechado: exclusivo ICONIC"
-                : "Evento exclusivo ICONIC"}
+                ? "Premium closed event: ICONIC exclusive"
+                : "ICONIC exclusive event"}
             </p>
           )}
 
@@ -125,7 +133,7 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
           {!isMember && !isSoldOut && (
             <div className={`${infoTextClass} text-xs mt-1`}>
               <div className="flex items-center gap-1">
-                <Ticket className="w-4 h-4" /> {remaining} vagas restantes
+                <Ticket className="w-4 h-4" /> {remaining} spots left
               </div>
             </div>
           )}
@@ -137,10 +145,10 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
                   disabled
                   className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-300 text-gray-500 cursor-not-allowed"
                 >
-                  Inscrito
+                  Registered
                 </button>
                 <Link to={`/events/${event.id}`} className={detailBtnClass}>
-                  Ver Detalhes
+                  View Details
                 </Link>
               </>
             ) : (
@@ -148,22 +156,20 @@ export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
                 {!isSoldOut && (
                   <button
                     onClick={() =>
-                      canAccess
-                        ? handleParticipation()
-                        : onIconicClick(event)
+                      canAccess ? handleParticipation() : onIconicClick(event)
                     }
                     className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${participateBtnClass}`}
                   >
                     {showLock && <Lock className="w-4 h-4 mr-1" />}
-                    {canAccess ? "Participar" : "Somente ICONIC"}
+                    {canAccess ? "Join" : "ICONIC Only"}
                   </button>
                 )}
                 <Link to={`/events/${event.id}`} className={detailBtnClass}>
-                  Ver Detalhes
+                  View Details
                 </Link>
                 {isSoldOut && (
                   <span className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-200 text-gray-400 text-center cursor-not-allowed">
-                    Esgotado
+                    Sold Out
                   </span>
                 )}
               </>

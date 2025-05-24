@@ -5,8 +5,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { api } from "@/lib/api";
 
 const tabList = [
-  { key: "events", label: "Eventos" },
-  { key: "my-tickets", label: "Meus Ingressos" },
+  { key: "events", label: "Recommended Events" },
+  { key: "my-tickets", label: "My Tickets" },
 ];
 
 export default function TicketsPage() {
@@ -63,14 +63,14 @@ export default function TicketsPage() {
           })}
         </div>
 
-        {/* Conteúdo */}
+        {/* Content */}
         {loading ? (
-          <p className="text-center text-gray-500 mt-10">Carregando…</p>
+          <p className="text-center text-gray-500 mt-10">Loading…</p>
         ) : events.length === 0 ? (
           <p className="text-center text-gray-500 mt-10">
             {tab === "events"
-              ? "Nenhum evento recomendado no momento."
-              : "Você ainda não se inscreveu em nenhum evento."}
+              ? "No recommended events at the moment."
+              : "You haven't registered for any events yet."}
           </p>
         ) : (
           <div className="space-y-4">
@@ -83,7 +83,7 @@ export default function TicketsPage() {
 
       <BottomNav />
 
-      {/* CSS do gradient animado (opcional - pode ir no globals.css também) */}
+      {/* Animated gradient CSS (optional, can go in globals.css) */}
       <style>{`
         @keyframes gradient-pan {
           0%,100% {background-position:0% 50%;}
