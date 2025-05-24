@@ -30,7 +30,7 @@ export default function QRCodeScreen() {
       setQrUrl(data.qr_code_url);
       setProgress(100);
     } catch (err) {
-      console.error("Erro ao gerar QR:", err);
+      console.error("Error generating QR:", err);
     } finally {
       setLoadingQr(false);
     }
@@ -48,7 +48,7 @@ export default function QRCodeScreen() {
         clearInterval(pollRef.current!);
       }
     } catch (err) {
-      console.warn("Erro ao verificar check-in:", err);
+      console.warn("Error checking check-in status:", err);
     }
   };
 
@@ -58,7 +58,7 @@ export default function QRCodeScreen() {
     // QR refresh timer
     let start = Date.now();
     timerRef.current = setInterval(() => {
-      const elapsed = (Date.now() - start) / 600; // 60s→100%
+      const elapsed = (Date.now() - start) / 600; // 60s → 100%
       const next = Math.max(0, 100 - elapsed);
       setProgress(next);
       if (next <= 0) {
@@ -76,12 +76,12 @@ export default function QRCodeScreen() {
     };
   }, []);
 
-  // Luxury messages
+  // Success messages
   const successMessage =
     eventId && checkedIn
       ? user?.role === "iconic" || eventId.includes("iconic")
-        ? "Brilhante! Seu acesso ICONIC foi autenticado."
-        : "Ótimo! Seu check‑in foi confirmado."
+        ? "Brilliant! Your ICONIC access has been authenticated."
+        : "Great! Your check-in has been confirmed."
       : "";
 
   return (
@@ -93,12 +93,12 @@ export default function QRCodeScreen() {
             {qrUrl ? (
               <img
                 src={qrUrl}
-                alt="QR Code de acesso"
+                alt="Access QR Code"
                 className="w-48 h-48 mb-6 shadow-lg"
                 onError={(e) => (e.currentTarget.src = placeholderEvent)}
               />
             ) : loadingQr ? (
-              <p className="text-gray-500">Gerando seu QR…</p>
+              <p className="text-gray-500">Generating your QR…</p>
             ) : null}
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
@@ -107,10 +107,10 @@ export default function QRCodeScreen() {
               />
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              QR ativo por <strong>{Math.ceil((progress / 100) * 60)}s</strong>
+              QR active for <strong>{Math.ceil((progress / 100) * 60)}s</strong>
             </p>
             <p className="mt-4 text-center text-gray-500 text-sm">
-              Apresente este QR ao scanner para liberar seu acesso.
+              Present this QR code to the scanner to unlock your access.
             </p>
           </>
         ) : (
@@ -122,7 +122,7 @@ export default function QRCodeScreen() {
               onClick={() => navigate(`/events/${eventId}`)}
               className="mt-2 px-6 py-3 bg-primary text-white font-semibold rounded-full"
             >
-              Voltar ao Evento
+              Back to Event
             </button>
           </div>
         )}

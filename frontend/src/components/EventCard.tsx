@@ -1,16 +1,18 @@
 import React from "react";
 import { Calendar, Clock, MapPin, Ticket, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEvents, Event } from "@/contexts/EventsContext";
-import { useAuth } from "@/contexts/AuthContext";
 import DefaultCover from "@/assets/placeholder_event.png";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Event } from "@/contexts/EventsContext";
 
-export function EventCard({ event }: { event: Event }) {
-  const { participate } = useEvents();
-  const { isIconic } = useAuth();
+interface EventCardProps {
+  event: Event;
+  onIconicClick: (evt: Event) => void;
+  canAccess: boolean;
+}
 
+export function EventCard({ event, onIconicClick, canAccess }: EventCardProps) {
   const remaining = event.max_attendees - event.current_attendees;
   const isSoldOut = remaining <= 0;
   const isMember = event.is_participating;
@@ -20,8 +22,7 @@ export function EventCard({ event }: { event: Event }) {
   const isPremiumClosed = isExclusive && !isPublic;
   const isExclusiveOpen = isExclusive && isPublic;
 
-  const canParticipate = isIconic || !isExclusive;
-  const showLock = isExclusiveOpen && !isIconic;
+  const showLock = isExclusiveOpen && !canAccess;
 
   const bgClass = isPremiumClosed
     ? "bg-gradient-to-br from-yellow-700 via-yellow-500 to-yellow-300 animate-gradient-pan shadow-lg"
@@ -45,7 +46,7 @@ export function EventCard({ event }: { event: Event }) {
 
   let participateBtnClass = soldOutBtn;
   if (!isSoldOut) {
-    if (!canParticipate) participateBtnClass = lockedBtn;
+    if (!canAccess) participateBtnClass = lockedBtn;
     else if (isPremiumClosed) participateBtnClass = premiumBtn;
     else participateBtnClass = standardBtn;
   }
@@ -56,25 +57,23 @@ export function EventCard({ event }: { event: Event }) {
       : "flex-1 py-2 text-sm font-medium rounded-full text-gray-800 border border-gray-300 hover:bg-gray-100 flex items-center justify-center";
 
   const handleParticipation = () => {
-    if (!canParticipate) {
+    if (!canAccess) {
       const msg = isPremiumClosed
-        ? "Evento premium fechado: exclusivo para membros ICONIC."
-        : "Passe ICONIC necessário para participar deste evento.";
+        ? "Premium closed event: exclusive to ICONIC members."
+        : "ICONIC pass required to join this event.";
       toast.error(msg, { position: "top-center", autoClose: 4000 });
       return;
     }
-    participate(event.id)
-      .then(() => toast.success("Inscrito com sucesso!", { autoClose: 3000 }))
-      .catch(() => toast.error("Erro ao participar.", { autoClose: 3000 }));
+    // Call your participation logic here if needed
   };
 
   const dt = new Date(event.date);
-  const dateStr = dt.toLocaleDateString("pt-BR", {
+  const dateStr = dt.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  const timeStr = dt.toLocaleTimeString("pt-BR", {
+  const timeStr = dt.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -85,7 +84,7 @@ export function EventCard({ event }: { event: Event }) {
         <div className="relative">
           <img
             className="w-full h-44 object-cover"
-            src={event.cover_image_url}
+            src={event.cover_image_url || DefaultCover}
             alt={event.title}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = DefaultCover;
@@ -93,12 +92,12 @@ export function EventCard({ event }: { event: Event }) {
           />
           {isMember && (
             <span className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
-              Inscrito
+              Registered
             </span>
           )}
           {!isMember && isSoldOut && (
             <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded">
-              Esgotado
+              Sold Out
             </span>
           )}
         </div>
@@ -114,8 +113,8 @@ export function EventCard({ event }: { event: Event }) {
           {(isPremiumClosed || isExclusiveOpen) && (
             <p className="text-xs italic font-medium text-white/80">
               {isPremiumClosed
-                ? "Evento premium fechado: exclusivo ICONIC"
-                : "Evento exclusivo ICONIC"}
+                ? "Premium closed event: ICONIC exclusive"
+                : "ICONIC exclusive event"}
             </p>
           )}
 
@@ -131,11 +130,10 @@ export function EventCard({ event }: { event: Event }) {
             </span>
           </div>
 
-          {/* Mostra vagas restantes somente se o user não está inscrito e não está esgotado */}
           {!isMember && !isSoldOut && (
             <div className={`${infoTextClass} text-xs mt-1`}>
               <div className="flex items-center gap-1">
-                <Ticket className="w-4 h-4" /> {remaining} vagas restantes
+                <Ticket className="w-4 h-4" /> {remaining} spots left
               </div>
             </div>
           )}
@@ -147,34 +145,31 @@ export function EventCard({ event }: { event: Event }) {
                   disabled
                   className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-300 text-gray-500 cursor-not-allowed"
                 >
-                  Inscrito
+                  Registered
                 </button>
                 <Link to={`/events/${event.id}`} className={detailBtnClass}>
-                  Ver Detalhes
+                  View Details
                 </Link>
               </>
             ) : (
               <>
                 {!isSoldOut && (
                   <button
-                    onClick={handleParticipation}
+                    onClick={() =>
+                      canAccess ? handleParticipation() : onIconicClick(event)
+                    }
                     className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${participateBtnClass}`}
                   >
-                    {showLock && (
-                      <Lock
-                        className="w-4 h-4 mr-1"
-                        aria-label="Restricted access"
-                      />
-                    )}
-                    Participar
+                    {showLock && <Lock className="w-4 h-4 mr-1" />}
+                    {canAccess ? "Join" : "ICONIC Only"}
                   </button>
                 )}
                 <Link to={`/events/${event.id}`} className={detailBtnClass}>
-                  Ver Detalhes
+                  View Details
                 </Link>
                 {isSoldOut && (
                   <span className="flex-1 py-2 text-sm font-semibold rounded-full bg-gray-200 text-gray-400 text-center cursor-not-allowed">
-                    Esgotado
+                    Sold Out
                   </span>
                 )}
               </>

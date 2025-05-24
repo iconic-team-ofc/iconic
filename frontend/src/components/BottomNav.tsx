@@ -5,15 +5,15 @@ import { Home, Sparkles, Ticket, User } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
-  { to: "/iconic-network", icon: Sparkles, label: "Rede" },
-  { to: "/tickets", icon: Ticket, label: "Ingressos" },
-  { to: "/profile", icon: User, label: "Perfil" },
+  { to: "/iconic-network", icon: Sparkles, label: "Network" },
+  { to: "/tickets", icon: Ticket, label: "Tickets" },
+  { to: "/profile", icon: User, label: "Profile" },
 ];
 
 export function BottomNav() {
   return (
     <>
-      {/* Gradiente para ícones e texto ativos */}
+      {/* Gradient for active icons and text */}
       <svg width="0" height="0" className="absolute">
         <defs>
           <linearGradient id="iconicGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -34,14 +34,14 @@ export function BottomNav() {
           >
             {({ isActive }) => (
               <>
-                {/* Ícone */}
+                {/* Icon */}
                 <Icon
                   stroke={isActive ? "url(#iconicGradient)" : "currentColor"}
                   className={`w-5 h-5 mb-1 ${
                     isActive ? "" : "text-gray-500 hover:text-gray-700"
                   }`}
                 />
-                {/* Texto */}
+                {/* Text */}
                 <span
                   className={`text-xs ${
                     isActive
