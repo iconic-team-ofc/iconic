@@ -14,6 +14,11 @@ import { EventParticipationModule } from './event-participations/event-participa
 import { EventCheckinModule } from './event-checkins/event-checkin.module';
 import { UserPhotosModule } from './user-photos/user-photo.module';
 import { IconicModule } from './iconic/iconic.module';
+import { PaymentModule } from '../payment/payment.module';
+
+// Import do módulo e guard de Sui
+import { SuiModule } from './sui/sui.module';
+import { PromoteIconicGuard } from './users/promote-iconic.guard';
 
 @Module({
   imports: [
@@ -23,11 +28,7 @@ import { IconicModule } from './iconic/iconic.module';
       pinoHttp: { transport: { target: 'pino-pretty' } },
     }),
 
-    ThrottlerModule.forRoot({
-      ttl: 60,
-      limit: 20,
-    }),
-
+    ThrottlerModule.forRoot(),
     BullModule.forRoot({
       redis: {
         host: process.env.REDIS_HOST,
@@ -37,13 +38,9 @@ import { IconicModule } from './iconic/iconic.module';
     }),
     BullModule.registerQueue({ name: 'checkin' }),
     BullModule.registerQueue({ name: 'participation' }),
+    CacheModule.register({ ttl: 60, max: 100 }),
 
-    // Cache em memória (para produção, troque o store para Redis)
-    CacheModule.register({
-      ttl: 60, // tempo de vida em segundos
-      max: 100, // número máximo de itens
-    }),
-
+    // Módulos de funcionalidades
     AuthModule,
     UsersModule,
     EventsModule,
@@ -51,18 +48,17 @@ import { IconicModule } from './iconic/iconic.module';
     EventCheckinModule,
     UserPhotosModule,
     IconicModule,
+    PaymentModule,
+
+    // SuiModule que exporta o SuiService
+    SuiModule,
   ],
   providers: [
-    // aplica cache de resposta HTTP em todas as rotas
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CacheInterceptor,
-    },
-    // aplica rate limiting globalmente
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    { provide: APP_INTERCEPTOR, useClass: CacheInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+
+    // Guard de validação de transação Sui
+    PromoteIconicGuard,
   ],
 })
 export class AppModule {}

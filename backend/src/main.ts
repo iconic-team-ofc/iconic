@@ -7,10 +7,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1) GZIP compression
+  // 1) GZIP
   app.use(compression());
 
-  // 2) Validação global de DTOs
+  // 2) Validação global
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   // 3) CORS
@@ -22,7 +22,11 @@ async function bootstrap() {
       'https://iconicxp.netlify.app',
     ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Transaction-Id',
+    ],
     credentials: false,
   });
 
