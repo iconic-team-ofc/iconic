@@ -117,18 +117,18 @@ export class UsersService {
     return this.prisma.user.delete({ where: { id } });
   }
 
-  /**
-   * Promove um usuário a ICONIC.
-   */
-  async promoteToIconic(id: string) {
-    return this.prisma.user.update({
-      where: { id },
-      data: {
-        role: Role.iconic,
-        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-      },
-    });
-  }
+// src/users/users.service.ts
+async promoteToIconic(id: string) {
+  return this.prisma.user.update({
+    where: { id },
+    data: {
+      role: Role.iconic,
+      is_iconic: true,                           // <<< adicione esta linha
+      iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    },
+  });
+}
+
 
   /**
    * Promove um usuário a SCANNER.
