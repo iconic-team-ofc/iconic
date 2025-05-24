@@ -27,7 +27,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [currentSlide, setCurrentSlide] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Pegando o tamanho da viewport (importante para slide fixo em mobile)
+  // Get viewport size (important for fixed slides on mobile)
   const [vw, setVw] = useState(() => window.innerWidth);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Carrossel
+  // Carousel
   const [sliderRef] = useKeenSlider<HTMLDivElement>({
     loop: true,
     slideChanged(slider) {
@@ -46,7 +46,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     renderMode: "performance",
   });
 
-  // Fotos (profile_picture_url sempre em primeiro)
+  // Photos (profile_picture_url always first)
   const allPhotos = useMemo(() => {
     const profile = user.profile_picture_url
       ? [{ id: "main", url: user.profile_picture_url }]
@@ -56,7 +56,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return [...profile, ...filtered];
   }, [user]);
 
-  // Idade
+  // Age calculation
   const calculateAge = (birthdate?: string) => {
     if (!birthdate) return null;
     const birth = new Date(birthdate);
@@ -82,17 +82,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           minHeight: "400px",
         }}
       >
-        {/* Botão fechar */}
+        {/* Close button */}
         <button
           className="absolute top-4 right-4 z-50 p-1 bg-black/70 rounded-full text-white hover:bg-black transition"
           onClick={onClose}
-          aria-label="Fechar"
+          aria-label="Close"
           style={{ lineHeight: 0 }}
         >
           <X className="w-7 h-7" />
         </button>
 
-        {/* Carrossel (preenche 100vw largura e até 70% da altura tela/modal) */}
+        {/* Carousel */}
         <div
           className="relative w-full flex-shrink-0"
           style={{
@@ -132,7 +132,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 >
                   <img
                     src={photo.url}
-                    alt={`Foto ${idx + 1}`}
+                    alt={`Photo ${idx + 1}`}
                     className="object-cover w-full h-full"
                     style={{
                       maxWidth: "100vw",
@@ -149,7 +149,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               ))
             ) : (
               <div className="keen-slider__slide flex items-center justify-center bg-gray-100 w-full h-full">
-                <span className="text-gray-400 text-xs">Sem fotos</span>
+                <span className="text-gray-400 text-xs">No photos</span>
               </div>
             )}
           </div>
@@ -168,7 +168,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           )}
         </div>
 
-        {/* Infos do usuário */}
+        {/* User info */}
         <div className="flex-1 p-4 pt-3 flex flex-col justify-start bg-white">
           <div className="flex items-center gap-2 mb-1 mt-0.5 min-w-0 flex-nowrap">
             <h2 className="text-base font-extrabold text-gray-900 truncate leading-5 uppercase flex-shrink min-w-0">
