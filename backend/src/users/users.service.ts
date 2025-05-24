@@ -1,3 +1,4 @@
+// src/users/users.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -17,9 +18,6 @@ export class UsersService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Busca um usuário pelo e-mail, ou cria um novo se não existir.
-   */
   async findOrCreate(data: {
     uid: string;
     email: string;
@@ -35,9 +33,7 @@ export class UsersService {
       phone_number,
       date_of_birth,
     } = data;
-
     let user = await this.prisma.user.findUnique({ where: { email } });
-
     if (!user) {
       user = await this.prisma.user.create({
         data: {
@@ -51,137 +47,94 @@ export class UsersService {
         },
       });
     }
-
     return user;
   }
 
-  /**
-   * Retorna um usuário pelo ID.
-   */
   async findById(id: string) {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  /**
-   * Lista todos os usuários.
-   */
   async findAll() {
     return this.prisma.user.findMany();
   }
 
-  /**
-   * Atualiza os dados de um usuário.
-   * Converte date_of_birth de string ISO para Date antes de salvar.
-   */
   async update(id: string, dto: UpdateUserDto) {
     const data: any = { ...dto };
     if (dto.date_of_birth) {
       data.date_of_birth = new Date(dto.date_of_birth);
     }
-    return this.prisma.user.update({
-      where: { id },
-      data,
-    });
+    return this.prisma.user.update({ where: { id }, data });
   }
 
-  /**
-   * Deleta um usuário.
-   */
   async remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
   }
 
-  /**
-   * Deleta usuário e suas fotos, removendo também do bucket Supabase.
-   */
   async removeWithPhotos(id: string) {
     const photos = await this.prisma.userPhoto.findMany({
       where: { user_id: id },
     });
-
     const paths = photos.map((p) => `${id}/${p.url.split('/').pop()}`);
-
-    if (paths.length > 0) {
+    if (paths.length) {
       const { error } = await this.supabase.storage
         .from('user-photos')
         .remove(paths);
-
-      if (error) {
-        console.error('Erro ao deletar fotos do Supabase:', error);
-        throw error;
-      }
+      if (error) throw error;
     }
-
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
     await this.prisma.eventParticipation.deleteMany({ where: { user_id: id } });
     return this.prisma.user.delete({ where: { id } });
   }
 
-// src/users/users.service.ts
-async promoteToIconic(id: string) {
-  return this.prisma.user.update({
-    where: { id },
-    data: {
-      role: Role.iconic,
-      is_iconic: true,                           // <<< adicione esta linha
-      iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-    },
-  });
-}
+  async promoteToIconic(id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        role: Role.iconic,
+        is_iconic: true,
+        iconic_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      },
+    });
+  }
 
-
-  /**
-   * Promove um usuário a SCANNER.
-   */
   async promoteToScanner(id: string) {
     return this.prisma.user.update({
       where: { id },
-      data: {
-        role: Role.scanner,
-      },
+      data: { role: Role.scanner },
     });
   }
 
-  /**
-   * Remove o papel SCANNER de um usuário.
-   */
   async demoteScanner(id: string) {
     return this.prisma.user.update({
       where: { id },
-      data: {
-        role: Role.user,
-      },
+      data: { role: Role.user },
     });
   }
 
   /**
-   * Lista usuários ICONIC válidos.
+   * Lista usuários ICONIC válidos em ordem aleatória.
    */
   async findIconicUsers() {
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         is_iconic: true,
-        iconic_expires_at: {
-          gt: new Date(),
-        },
+        iconic_expires_at: { gt: new Date() },
       },
     });
+    // Shuffle for random order
+    return users.sort(() => Math.random() - 0.5);
   }
 
   /**
-   * Lista usuários com perfil público.
+   * Lista usuários com perfil público em ordem aleatória.
    */
   async findPublicUsers() {
-    return this.prisma.user.findMany({
-      where: {
-        show_public_profile: true,
-      },
+    const users = await this.prisma.user.findMany({
+      where: { show_public_profile: true },
     });
+    return users.sort(() => Math.random() - 0.5);
   }
 
-  /**
-   * Retorna perfil público completo com até 6 fotos.
-   */
   async getPublicProfileWithPhotos(
     userId: string,
     requesterId: string | null = null,
@@ -195,22 +148,19 @@ async promoteToIconic(id: string) {
         },
       },
     });
-
     if (!user) throw new NotFoundException('User not found');
-
-    // verifica visibilidade
     if (!user.show_public_profile) {
       if (!requesterId) throw new ForbiddenException('Private profile');
       const requester = await this.prisma.user.findUnique({
         where: { id: requesterId },
       });
-      if (!requester) throw new ForbiddenException();
-      const isIconicRequester = requester.is_iconic;
-      if (!user.show_profile_to_iconics || !isIconicRequester) {
+      if (
+        !requester ||
+        (!user.show_profile_to_iconics && !requester.is_iconic)
+      ) {
         throw new ForbiddenException('Private profile');
       }
     }
-
     const {
       id,
       full_name,
@@ -222,7 +172,6 @@ async promoteToIconic(id: string) {
       photos,
       date_of_birth,
     } = user;
-
     return {
       id,
       full_name,
@@ -236,13 +185,9 @@ async promoteToIconic(id: string) {
     };
   }
 
-  /**
-   * Atualiza a foto de perfil principal.
-   */
   async updateProfilePicture(userId: string, url: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-
     return this.prisma.user.update({
       where: { id: userId },
       data: { profile_picture_url: url },

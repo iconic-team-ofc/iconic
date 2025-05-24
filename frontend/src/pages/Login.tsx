@@ -25,11 +25,8 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col justify-evenly items-center bg-gray-50 px-6 relative">
       {/* Desktop advisory: open on mobile */}
-      <div className="hidden sm:block absolute top-4 left-0 w-full flex justify-center">
-        <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg shadow text-sm font-medium max-w-md text-center border border-yellow-200">
-          For the best ICONIC experience, please open this app on your mobile
-          device.
-        </div>
+      <div className="hidden sm:block absolute top-4 left-10w-full flex justify-center">
+          For the best ICONIC experience, please open this app on your notebook device
       </div>
 
       {/* Animated gradient title */}

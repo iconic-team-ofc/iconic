@@ -1,3 +1,4 @@
+// src/pages/Profile.tsx
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { supabase } from "@/supabaseClient";
@@ -35,16 +36,14 @@ export default function Profile() {
     async function fetchProfile() {
       try {
         const { data } = await api.get<User>("/users/me");
-        if (data.date_of_birth) {
+        if (data.date_of_birth)
           data.date_of_birth = data.date_of_birth.split("T")[0];
-        }
         if (data.phone_number) {
           const digits = data.phone_number.replace(/\D/g, "");
           const code =
             digits.length > 11 ? digits.slice(0, digits.length - 11) : "1";
-          const number = digits.slice(-11);
           setPhoneCode(code);
-          setPhoneNumber(number);
+          setPhoneNumber(digits.slice(-11));
         }
         setUser(data);
         const photosRes = await api.get<UserPhoto[]>("/user-photos");
@@ -63,29 +62,10 @@ export default function Profile() {
   ) => {
     if (!user) return;
     const { name, value, type, checked } = e.target;
-    setUser({
-      ...user,
-      [name]: type === "checkbox" ? checked : value,
-    });
+    setUser({ ...user, [name]: type === "checkbox" ? checked : value });
   };
 
-  const validateImage = (file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve();
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject();
-      };
-      img.src = url;
-    });
-  };
-
-  const handleSave = async (): Promise<void> => {
+  const handleSave = async () => {
     if (!user) return;
     try {
       const dto: any = {
@@ -96,19 +76,15 @@ export default function Profile() {
         show_public_profile: user.show_public_profile,
         show_profile_to_iconics: user.show_profile_to_iconics,
       };
-      if (user.date_of_birth) {
+      if (user.date_of_birth)
         dto.date_of_birth = new Date(user.date_of_birth).toISOString();
-      }
-      if (phoneNumber) {
-        dto.phone_number = `+${phoneCode}${phoneNumber}`;
-      }
+      if (phoneNumber) dto.phone_number = `+${phoneCode}${phoneNumber}`;
       await api.patch(`/users/${user.id}`, dto);
       alert("Profile updated successfully!");
     } catch (error: any) {
       console.error("Error updating profile:", error.response?.data || error);
       alert(
-        "Failed to update profile. Please check your data and try again.\n" +
-          (error.response?.data?.message || "")
+        "Failed to update profile. " + (error.response?.data?.message || "")
       );
     }
   };
@@ -119,13 +95,7 @@ export default function Profile() {
   ) => {
     if (!e.target.files || !user) return;
     const file = e.target.files[0];
-    try {
-      await validateImage(file);
-    } catch {
-      alert("Invalid or corrupted image file.");
-      return;
-    }
-    const ext = file.name.split(".")?.pop();
+    const ext = file.name.split(".").pop();
     const fileName = `${Date.now()}.${ext}`;
     const path = `${user.id}/${fileName}`;
     const { error } = await supabase.storage
@@ -139,7 +109,7 @@ export default function Profile() {
     const url = data.publicUrl;
     if (isProfile) {
       await api.patch("/users/profile-picture", { url });
-      setUser((u) => (u ? { ...u, profile_picture_url: url } : u));
+      setUser((u) => u && { ...u, profile_picture_url: url });
     } else {
       await api.post("/user-photos", { url });
       const photosRes = await api.get<UserPhoto[]>("/user-photos");
@@ -151,176 +121,178 @@ export default function Profile() {
     if (!confirm("Are you sure you want to delete this photo?")) return;
     try {
       await api.delete(`/user-photos/${id}`);
-      setPhotos((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      console.error("Error deleting photo:", err);
+      setPhotos((p) => p.filter((x) => x.id !== id));
+    } catch {
       alert("Failed to delete photo.");
     }
   };
 
-  if (loading || !user) {
-    return <p className="p-4">Loading profile...</p>;
-  }
+  if (loading || !user) return <p className="p-4">Loading profile...</p>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 pt-16 pb-24">
       <Header />
-      <div className="flex-1 overflow-auto p-4 space-y-6 pb-24">
-        <h1 className="text-2xl font-extrabold text-primary">My Profile</h1>
-
-        <div className="flex justify-center mb-4">
-          <div className="relative w-24 h-32">
-            <img
-              src={user.profile_picture_url || "/avatar_placeholder.png"}
-              alt="Avatar"
-              className="w-24 h-32 rounded-xl object-cover"
-            />
-            <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full shadow cursor-pointer">
-              <UploadCloud className="w-5 h-5 text-black" />
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={(e) => handlePhotoUpload(e, true)}
+      <main className="flex-1 overflow-auto p-4 md:p-8 lg:px-16 lg:py-12 max-w-4xl mx-auto space-y-6">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-primary">
+          My Profile
+        </h1>
+        <div className="flex flex-col md:flex-row md:gap-8">
+          <div className="flex-shrink-0 flex flex-col items-center">
+            <div className="relative w-32 h-32 md:w-40 md:h-40">
+              <img
+                src={user.profile_picture_url || "/avatar_placeholder.png"}
+                alt="Avatar"
+                className="w-full h-full rounded-xl object-cover"
               />
-            </label>
+              <label className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow cursor-pointer">
+                <UploadCloud className="w-6 h-6 text-black" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => handlePhotoUpload(e, true)}
+                />
+              </label>
+            </div>
+            <span className="mt-2 text-sm text-gray-600">
+              Click icon to update
+            </span>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          {[
-            {
-              label: "Full Name",
-              name: "full_name",
-              placeholder: "Enter your full name",
-              value: user.full_name,
-            },
-            {
-              label: "Nickname",
-              name: "nickname",
-              placeholder: "What should we call you?",
-              value: user.nickname,
-            },
-            {
-              label: "Instagram",
-              name: "instagram",
-              placeholder: "@yourhandle",
-              value: user.instagram || "",
-            },
-          ].map((field) => (
-            <div key={field.name}>
+          <div className="flex-1 space-y-4">
+            {[
+              {
+                label: "Full Name",
+                name: "full_name",
+                type: "text",
+                value: user.full_name,
+                placeholder: "Enter your full name",
+              },
+              {
+                label: "Nickname",
+                name: "nickname",
+                type: "text",
+                value: user.nickname,
+                placeholder: "What should we call you?",
+              },
+              {
+                label: "Instagram",
+                name: "instagram",
+                type: "text",
+                value: user.instagram || "",
+                placeholder: "@yourhandle",
+              },
+            ].map((f) => (
+              <div key={f.name}>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  {f.label}
+                </label>
+                <input
+                  name={f.name}
+                  type={f.type}
+                  placeholder={f.placeholder}
+                  value={f.value as string}
+                  onChange={handleChange}
+                  className="w-full p-3 rounded-xl bg-white outline-none text-gray-900"
+                />
+              </div>
+            ))}
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {field.label}
+                Phone Number
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={phoneCode}
+                  onChange={(e) =>
+                    setPhoneCode(e.target.value.replace(/\D/g, ""))
+                  }
+                  maxLength={4}
+                  className="w-20 p-3 rounded-xl bg-gray-100 text-gray-900 text-center outline-none"
+                />
+                <input
+                  placeholder="11999999999"
+                  value={phoneNumber}
+                  onChange={(e) =>
+                    setPhoneNumber(
+                      e.target.value.replace(/\D/g, "").slice(0, 11)
+                    )
+                  }
+                  maxLength={11}
+                  inputMode="numeric"
+                  className="flex-1 p-3 rounded-xl bg-white text-gray-900 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Bio
+              </label>
+              <textarea
+                name="bio"
+                placeholder="Tell us something about you..."
+                value={user.bio || ""}
+                onChange={handleChange}
+                className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Date of Birth
               </label>
               <input
-                name={field.name}
-                placeholder={field.placeholder}
-                value={field.value}
+                name="date_of_birth"
+                type="date"
+                value={user.date_of_birth || ""}
                 onChange={handleChange}
                 className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
               />
             </div>
-          ))}
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Phone Number
-            </label>
-            <div className="flex gap-2">
-              <input
-                value={phoneCode}
-                onChange={(e) =>
-                  setPhoneCode(e.target.value.replace(/\D/g, ""))
+            <div className="flex flex-col md:flex-row md:gap-4 mt-4">
+              <button
+                onClick={() =>
+                  setUser(
+                    (u) =>
+                      u && { ...u, show_public_profile: !u.show_public_profile }
+                  )
                 }
-                maxLength={4}
-                className="w-16 p-3 rounded-xl bg-gray-100 text-gray-900 outline-none text-center"
-              />
-              <input
-                placeholder="11999999999"
-                value={phoneNumber}
-                onChange={(e) =>
-                  setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 11))
-                }
-                maxLength={11}
-                inputMode="numeric"
-                className="flex-1 p-3 rounded-xl bg-white text-gray-900 outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Bio
-            </label>
-            <textarea
-              name="bio"
-              placeholder="Tell us something about you..."
-              value={user.bio || ""}
-              onChange={handleChange}
-              className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
-              rows={3}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Date of Birth
-            </label>
-            <input
-              name="date_of_birth"
-              type="date"
-              value={user.date_of_birth || ""}
-              onChange={handleChange}
-              className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
-            />
-          </div>
-
-          <div className="space-y-2 mt-4">
-            <button
-              onClick={() =>
-                setUser((u) =>
-                  u ? { ...u, show_public_profile: !u.show_public_profile } : u
-                )
-              }
-              className="flex items-center gap-2 text-sm font-medium text-gray-800"
-            >
-              {user.show_public_profile ? (
-                <CheckCircle className="w-5 h-5 text-primary" />
-              ) : (
-                <Circle className="w-5 h-5 text-gray-400" />
-              )}
-              Show profile publicly
-            </button>
-            <button
-              onClick={() =>
-                setUser((u) =>
-                  u
-                    ? {
+                className="flex items-center gap-2 text-sm font-medium text-gray-800"
+              >
+                {user.show_public_profile ? (
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                ) : (
+                  <Circle className="w-5 h-5 text-gray-400" />
+                )}{" "}
+                Show profile publicly
+              </button>
+              <button
+                onClick={() =>
+                  setUser(
+                    (u) =>
+                      u && {
                         ...u,
                         show_profile_to_iconics: !u.show_profile_to_iconics,
                       }
-                    : u
-                )
-              }
-              className="flex items-center gap-2 text-sm font-medium text-gray-800"
+                  )
+                }
+                className="flex items-center gap-2 text-sm font-medium text-gray-800"
+              >
+                {user.show_profile_to_iconics ? (
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                ) : (
+                  <Circle className="w-5 h-5 text-gray-400" />
+                )}{" "}
+                Show in ICONIC network
+              </button>
+            </div>
+            <button
+              onClick={handleSave}
+              className="w-full bg-primary text-white py-3 rounded-xl font-semibold mt-4"
             >
-              {user.show_profile_to_iconics ? (
-                <CheckCircle className="w-5 h-5 text-primary" />
-              ) : (
-                <Circle className="w-5 h-5 text-gray-400" />
-              )}
-              Show in ICONIC network
+              Save changes
             </button>
           </div>
-
-          <button
-            onClick={handleSave}
-            className="w-full bg-primary text-white py-3 rounded-xl font-semibold mt-4"
-          >
-            Save changes
-          </button>
         </div>
-
         <div className="mt-8">
           <h2 className="font-semibold mb-2 text-gray-800">
             My Photos ({photos.length}/6)
@@ -342,7 +314,7 @@ export default function Profile() {
             ))}
             {photos.length < 6 && (
               <label className="cursor-pointer flex items-center justify-center border-2 border-dashed rounded-xl h-32 bg-white text-gray-500">
-                <span className="text-sm">+ Add</span>
+                + Add
                 <input
                   type="file"
                   accept="image/*"
@@ -353,7 +325,7 @@ export default function Profile() {
             )}
           </div>
         </div>
-      </div>
+      </main>
       <BottomNav />
     </div>
   );

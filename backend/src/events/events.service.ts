@@ -1,6 +1,8 @@
-// src/events.service.ts
-
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dtos/create-event.dto';
 import { UpdateEventDto } from './dtos/update-event.dto';
@@ -9,16 +11,37 @@ import { UpdateEventDto } from './dtos/update-event.dto';
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Cria um evento (admin)
   async create(dto: CreateEventDto) {
-    const datetime = new Date(`${dto.date}T${dto.time}:00`);
+    let dt: Date;
+
+    // Se `dto.date` já vier no formato ISO completo, usa diretamente
+    if (dto.date.includes('T')) {
+      dt = new Date(dto.date);
+    } else {
+      // Senão combina date + time
+      if (!dto.time) {
+        throw new BadRequestException(
+          '`time` is required when `date` is not full ISO string',
+        );
+      }
+      const [h, m] = dto.time.split(':').map(Number);
+      dt = new Date(dto.date);
+      dt.setHours(h, m, 0, 0);
+    }
+
+    if (isNaN(dt.getTime())) {
+      throw new BadRequestException(
+        `Invalid date/time: ${dto.date} / ${dto.time}`,
+      );
+    }
+
     return this.prisma.event.create({
       data: {
         title: dto.title,
         description: dto.description,
         location: dto.location,
-        date: datetime,
-        time: datetime,
+        date: dt,
+        time: dt,
         category: dto.category,
         is_exclusive: dto.is_exclusive,
         is_public: dto.is_public,
@@ -31,48 +54,44 @@ export class EventsService {
     });
   }
 
-  // Lista todos públicos
   async findAllPublic() {
     return this.prisma.event.findMany({ where: { is_public: true } });
   }
 
-  // Lista todos exclusivos (login)
   async findAllExclusive() {
     return this.prisma.event.findMany({ where: { is_exclusive: true } });
   }
 
-  // Busca evento puro
   async findById(id: string) {
     return this.prisma.event.findUnique({ where: { id } });
   }
 
-  // Atualiza evento (admin)
   async update(id: string, dto: UpdateEventDto) {
-    let date: Date | undefined;
-    let time: Date | undefined;
+    const data: any = { ...dto };
+
     if (dto.date && dto.time) {
-      const dt = new Date(`${dto.date}T${dto.time}:00`);
-      date = dt;
-      time = dt;
+      const [h, m] = dto.time.split(':').map(Number);
+      const dt = new Date(dto.date);
+      dt.setHours(h, m, 0, 0);
+      if (isNaN(dt.getTime())) {
+        throw new BadRequestException(
+          `Invalid date/time: ${dto.date} / ${dto.time}`,
+        );
+      }
+      data.date = dt;
+      data.time = dt;
     }
+
     return this.prisma.event.update({
       where: { id },
-      data: {
-        ...dto,
-        ...(date && { date }),
-        ...(time && { time }),
-      },
+      data,
     });
   }
 
-  // Remove evento (admin)
   async remove(id: string) {
     return this.prisma.event.delete({ where: { id } });
   }
 
-  // --- NOVOS MÉTODOS PARA PARTICIPAÇÃO ---
-
-  /** Busca um evento + is_participating e participation_id */
   async findByIdWithParticipation(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -95,18 +114,15 @@ export class EventsService {
     };
   }
 
-  /** Recomendação com base no tipo de usuário */
   async findRecommendedForUser(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
-    // Iconic vê tudo, users só veem eventos públicos
+    // Iconic vê tudo, users só vêem eventos públicos
     const where = user.is_iconic ? {} : { is_public: true };
-
     return this.prisma.event.findMany({ where });
   }
 
-  /** Recomendados + flags de participação */
   async findRecommendedWithParticipation(userId: string) {
     const events = await this.findRecommendedForUser(userId);
 
@@ -128,23 +144,17 @@ export class EventsService {
     }));
   }
 
-  // Lista todos eventos em que o usuário está participando
   async findParticipating(userId: string) {
     const participations = await this.prisma.eventParticipation.findMany({
-      where: {
-        user_id: userId,
-        status: 'confirmed',
-      },
+      where: { user_id: userId, status: 'confirmed' },
       select: { event_id: true, id: true },
     });
 
     const eventIds = participations.map((p) => p.event_id);
-
     const events = await this.prisma.event.findMany({
       where: { id: { in: eventIds } },
     });
 
-    // Marcar participação igual ao recommended
     return events.map((e) => ({
       ...e,
       is_participating: true,

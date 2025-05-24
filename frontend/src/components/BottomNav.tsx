@@ -13,7 +13,6 @@ const navItems = [
 export function BottomNav() {
   return (
     <>
-      {/* Gradient for active icons and text */}
       <svg width="0" height="0" className="absolute">
         <defs>
           <linearGradient id="iconicGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -23,8 +22,7 @@ export function BottomNav() {
           </linearGradient>
         </defs>
       </svg>
-
-      <nav className="fixed bottom-0 z-50 w-full bg-white border-t border-gray-200 flex justify-around py-2 sm:hidden">
+      <nav className="fixed bottom-0 z-50 w-full bg-white border-t border-gray-200 flex justify-around py-2">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
@@ -34,14 +32,12 @@ export function BottomNav() {
           >
             {({ isActive }) => (
               <>
-                {/* Icon */}
                 <Icon
                   stroke={isActive ? "url(#iconicGradient)" : "currentColor"}
                   className={`w-5 h-5 mb-1 ${
                     isActive ? "" : "text-gray-500 hover:text-gray-700"
                   }`}
                 />
-                {/* Text */}
                 <span
                   className={`text-xs ${
                     isActive
