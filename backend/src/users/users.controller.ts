@@ -1,4 +1,3 @@
-// src/users/users.controller.ts
 import {
   Body,
   Controller,
@@ -37,7 +36,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // ------------------------------------------------------------------
-  // CORS pre-flight (somente para dev)
+  // CORS pre-flight (dev only)
   // ------------------------------------------------------------------
   @Options('*')
   @Header('Access-Control-Allow-Origin', 'http://localhost:5173')
@@ -53,7 +52,16 @@ export class UsersController {
   options() {}
 
   // ------------------------------------------------------------------
-  // PERFIL PRÓPRIO
+  // PUBLIC: list ICONIC members with public profile
+  // ------------------------------------------------------------------
+  @Get('iconic')
+  @ApiOperation({ summary: 'List public ICONIC members' })
+  async listPublicIconics() {
+    return this.usersService.findPublicIconicUsers();
+  }
+
+  // ------------------------------------------------------------------
+  // CURRENT USER PROFILE
   // ------------------------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Get('me')
@@ -62,19 +70,27 @@ export class UsersController {
     return this.usersService.findById(req.user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  async updateMe(@Req() req, @Body() dto: UpdateUserDto) {
+    return this.usersService.update(req.user.sub, dto);
+  }
+
   // ------------------------------------------------------------------
-  // FOTO DE PERFIL (estático, vem antes do :id)
+  // PROFILE PICTURE (static, comes before :id)
   // ------------------------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Patch('profile-picture')
-  @ApiOperation({ summary: 'Atualiza a foto de perfil do usuário autenticado' })
-  @ApiResponse({ status: 200, description: 'Foto de perfil atualizada' })
+  @ApiOperation({ summary: 'Update authenticated user profile picture' })
+  @ApiResponse({ status: 200, description: 'Profile picture updated' })
   async updateProfilePicture(@Req() req, @Body() dto: UpdateProfilePictureDto) {
     return this.usersService.updateProfilePicture(req.user.sub, dto.url);
   }
 
   // ------------------------------------------------------------------
-  // LISTA TODOS (admin)
+  // LIST ALL (admin)
   // ------------------------------------------------------------------
   @Roles(Role.admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -85,22 +101,22 @@ export class UsersController {
   }
 
   // ------------------------------------------------------------------
-  // OBTÉM USUÁRIO POR ID
+  // GET USER BY ID
   // ------------------------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  @ApiParam({ name: 'id', description: 'UUID do usuário' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.usersService.findById(id);
   }
 
   // ------------------------------------------------------------------
-  // ATUALIZA USUÁRIO POR ID (admin)
+  // UPDATE USER BY ID (admin)
   // ------------------------------------------------------------------
   @Roles(Role.admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
-  @ApiParam({ name: 'id', description: 'UUID do usuário' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateUserDto,
@@ -109,33 +125,33 @@ export class UsersController {
   }
 
   // ------------------------------------------------------------------
-  // REMOVE USUÁRIO (admin)
+  // DELETE USER (admin)
   // ------------------------------------------------------------------
   @Roles(Role.admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')
   @HttpCode(204)
-  @ApiParam({ name: 'id', description: 'UUID do usuário' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.usersService.remove(id);
   }
 
   // ------------------------------------------------------------------
-  // PROMOVE A ICONIC
+  // PROMOTE TO ICONIC
   // ------------------------------------------------------------------
   @UseGuards(JwtAuthGuard, PromoteIconicGuard)
   @Post('iconic/:id')
-  @ApiParam({ name: 'id', description: 'UUID do usuário' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   async promoteToIconic(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.usersService.promoteToIconic(id);
   }
 
   // ------------------------------------------------------------------
-  // PERFIL PÚBLICO
+  // PUBLIC PROFILE
   // ------------------------------------------------------------------
   @UseGuards(JwtAuthGuard)
   @Get('public/:id')
-  @ApiParam({ name: 'id', description: 'UUID do usuário' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
   async getPublicProfile(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Req() req,

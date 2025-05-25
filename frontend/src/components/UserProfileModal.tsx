@@ -1,5 +1,5 @@
 // src/components/UserProfileModal.tsx
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Dialog } from "@headlessui/react";
 import { X, Instagram } from "lucide-react";
 import { useKeenSlider } from "keen-slider/react";
@@ -29,30 +29,48 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   user,
 }) => {
+  /* ──────────────────────────────────────────────────────────
+   * Estado reiniciado a cada abertura
+   * ────────────────────────────────────────────────────────── */
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loaded, setLoaded] = useState<Record<string, boolean>>({});
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [slideWidth, setSlideWidth] = useState(0);
 
   useEffect(() => {
-    const measure = () => {
-      const w = containerRef.current?.clientWidth || window.innerWidth;
-      setSlideWidth(w);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
+    if (isOpen) {
+      setCurrentSlide(0);
+      setLoaded({});
+    }
+  }, [isOpen]);
 
-  const [sliderRef] = useKeenSlider<HTMLDivElement>({
+  /* ──────────────────────────────────────────────────────────
+   * Keen Slider
+   * ────────────────────────────────────────────────────────── */
+  const [sliderRef, slider] = useKeenSlider<HTMLDivElement>({
     loop: true,
-    slideChanged(slider) {
-      setCurrentSlide(slider.track.details.rel);
-    },
     mode: "free-snap",
     renderMode: "performance",
+    slides: { perView: 1 },
+    created(s) {
+      // força recálculo depois que o modal ficou visível
+      setTimeout(() => s.update(), 0);
+    },
+    slideChanged(s) {
+      setCurrentSlide(s.track.details.rel);
+    },
   });
 
+  /* Recalcula tamanho quando o modal é reaberto ou a janela redimensiona */
+  useEffect(() => {
+    if (!isOpen) return;
+    const refresh = () => slider.current?.update();
+    refresh(); // logo que abriu
+    window.addEventListener("resize", refresh);
+    return () => window.removeEventListener("resize", refresh);
+  }, [isOpen, slider]);
+
+  /* ──────────────────────────────────────────────────────────
+   * Fotos (traz a foto de perfil primeiro)
+   * ────────────────────────────────────────────────────────── */
   const allPhotos = useMemo<Photo[]>(() => {
     const main = user.profile_picture_url
       ? [{ id: "main", url: user.profile_picture_url }]
@@ -61,6 +79,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return [...main, ...rest];
   }, [user]);
 
+  /* idade (opcional) */
   const age = useMemo(() => {
     if (!user.date_of_birth) return null;
     const b = new Date(user.date_of_birth);
@@ -71,16 +90,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return a;
   }, [user.date_of_birth]);
 
+  /* ──────────────────────────────────────────────────────────
+   * Render
+   * ────────────────────────────────────────────────────────── */
   return (
     <Dialog
       open={isOpen}
       onClose={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
     >
-      <div
-        ref={containerRef}
-        className="relative w-full max-w-md sm:max-w-lg md:max-w-xl h-[90vh] bg-white rounded-2xl shadow-xl flex flex-col"
-      >
+      <div className="relative w-full max-w-md sm:max-w-lg md:max-w-xl h-[90vh] bg-white rounded-2xl shadow-xl flex flex-col">
+        {/* botão fechar */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:bg-black/80 transition"
@@ -89,32 +109,37 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <X className="w-6 h-6" />
         </button>
 
-        <div
-          className="flex-none"
-          style={{ height: "60%", minHeight: "240px" }}
-        >
-          <div ref={sliderRef} className="keen-slider h-full relative">
+        {/* SLIDER */}
+        <div className="flex-none h-[60%] min-h-[240px]">
+          <div
+            ref={sliderRef}
+            className="keen-slider h-full relative select-none"
+          >
             {allPhotos.length > 0 ? (
-              allPhotos.map((photo) => (
+              allPhotos.map((photo, idx) => (
                 <div
                   key={photo.id}
-                  className="keen-slider__slide flex items-center justify-center h-full"
-                  style={{ width: slideWidth, minWidth: slideWidth }}
+                  className="keen-slider__slide flex items-center justify-center w-full aspect-[3/4]"
+                  style={{ flex: "0 0 100%" }}
                 >
+                  {/* Skeleton */}
                   {!loaded[photo.id] && (
                     <div className="absolute inset-0 bg-gray-300 animate-pulse" />
                   )}
+
                   <img
                     src={photo.url}
-                    alt="User photo"
+                    alt={`User photo ${idx + 1}`}
                     loading="lazy"
+                    decoding="async"
                     onLoad={() =>
-                      setLoaded((prev) => ({ ...prev, [photo.id]: true }))
+                      setLoaded((p) => ({ ...p, [photo.id]: true }))
                     }
-                    onError={(e) =>
-                      (e.currentTarget.src = "/avatar_placeholder.png")
-                    }
-                    className={`object-cover w-full h-full transition-opacity duration-300 ${
+                    onError={(e) => {
+                      e.currentTarget.src = "/avatar_placeholder.png";
+                      setLoaded((p) => ({ ...p, [photo.id]: true }));
+                    }}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-400 ${
                       loaded[photo.id] ? "opacity-100" : "opacity-0"
                     }`}
                     draggable={false}
@@ -126,8 +151,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <span className="text-gray-400 text-sm">No photos</span>
               </div>
             )}
+
+            {/* bullets */}
             {allPhotos.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-2">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                 {allPhotos.map((_, idx) => (
                   <span
                     key={idx}
@@ -141,6 +168,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </div>
         </div>
 
+        {/* informações */}
         <div className="flex-1 p-4 overflow-auto">
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-lg font-bold text-gray-900 truncate uppercase">
@@ -169,6 +197,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* animação gradiente */}
       <style>{`
         @keyframes gradient-move {
           0% { background-position: 0% 50%; }

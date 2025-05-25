@@ -197,4 +197,27 @@ export class UsersService {
       data: { profile_picture_url: url },
     });
   }
+
+  async findPublicIconicUsers() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        is_iconic: true,
+        show_public_profile: true,
+        OR: [
+          { iconic_expires_at: null }, 
+          { iconic_expires_at: { gt: new Date() } }, 
+        ],
+      },
+      select: {
+        id: true,
+        full_name: true,
+        nickname: true,
+        profile_picture_url: true,
+        is_iconic: true,
+      },
+    });
+
+    // embaralha para exibição
+    return users.sort(() => Math.random() - 0.5);
+  }
 }
