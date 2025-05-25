@@ -1,4 +1,3 @@
-// src/pages/Profile.tsx
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { supabase } from "@/supabaseClient";
@@ -80,20 +79,30 @@ export default function Profile() {
 
   const handleSave = async () => {
     if (!user) return;
-    try {
-      const dto: any = {
-        full_name: user.full_name,
-        nickname: user.nickname,
-        instagram: user.instagram || undefined,
-        bio: user.bio || undefined,
-        show_public_profile: user.show_public_profile,
-        show_profile_to_iconics: user.show_profile_to_iconics,
-      };
-      if (user.date_of_birth)
-        dto.date_of_birth = new Date(user.date_of_birth).toISOString();
-      if (phoneNumber) dto.phone_number = `+${phoneCode}${phoneNumber}`;
 
-      await api.patch(`/users/${user.id}`, dto);
+    // monta DTO só com campos realmente preenchidos
+    const dto: Record<string, any> = {
+      show_public_profile: user.show_public_profile,
+      show_profile_to_iconics: user.show_profile_to_iconics,
+    };
+
+    const addIfValue = (key: keyof User, value?: string | null) => {
+      const trimmed = value?.trim();
+      if (trimmed) dto[key] = trimmed;
+    };
+
+    addIfValue("full_name", user.full_name);
+    addIfValue("nickname", user.nickname);
+    addIfValue("instagram", user.instagram);
+    addIfValue("bio", user.bio);
+
+    if (user.date_of_birth)
+      dto.date_of_birth = new Date(user.date_of_birth).toISOString();
+
+    if (phoneNumber) dto.phone_number = `+${phoneCode}${phoneNumber}`;
+
+    try {
+      await api.patch("/users/me", dto); // nova rota
       toast.success("Profile updated!");
     } catch (error: any) {
       console.error(error);
@@ -122,14 +131,13 @@ export default function Profile() {
     });
 
   // ────────────────────────────────────────────────────────────
-  // Re-place the previous handlePhotoUpload with the new version
+  // Photo upload handler
   // ────────────────────────────────────────────────────────────
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     isProfile = false
   ) => {
     if (!e.target.files || !user) return;
-
     const file = e.target.files[0];
 
     // 1) File-type validation
