@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -30,6 +29,7 @@ interface AuthContextProps {
   isIconic: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>; // ← NEW
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -38,6 +38,7 @@ const AuthContext = createContext<AuthContextProps>({
   isIconic: false,
   login: async () => {},
   logout: async () => {},
+  refresh: async () => {}, // ← NEW
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -55,6 +56,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsIconic(Boolean(res.data.is_iconic));
   };
 
+  /** Public helper so any component can refresh role/badge */
+  const refresh = async () => {
+    try {
+      if (token) await fetchMe();
+    } catch (e) {
+      console.error("Failed to refresh user", e);
+    }
+  };
+
   const exchangeAndStoreToken = async (idToken: string) => {
     const { data } = await api.post<{ access_token: string }>(
       "/auth/login/firebase",
@@ -69,16 +79,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async () => {
-    // dispara o fluxo de login do Firebase (popup ou redirect)
     const idToken = await loginWithGoogle();
-    if (idToken) {
-      await exchangeAndStoreToken(idToken);
-      // não precisa mais de window.location.reload(), o listener cuidará de atualizar o estado
-    }
+    if (idToken) await exchangeAndStoreToken(idToken);
   };
 
   const logout = async () => {
-    // limpa tokens e state
     localStorage.removeItem("token");
     sessionStorage.removeItem("firebase-authenticated");
     setToken(null);
@@ -89,13 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Se já estivermos autenticados nesta session, definimos o header e buscamos o perfil
     const prevAuth = sessionStorage.getItem("firebase-authenticated");
     if (prevAuth && token) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       fetchMe().finally(() => setInitialized(true));
     } else {
-      // Senão, escutamos o estado de autenticação do Firebase
       const unsubscribe = onAuthStateChanged(
         auth,
         async (fbUser: FirebaseUser | null) => {
@@ -104,7 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const idToken = await fbUser.getIdToken();
               await exchangeAndStoreToken(idToken);
             } catch {
-              // falha no token, força logout
               await logout();
             }
           }
@@ -118,13 +120,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-700">Carregando autenticação...</p>
+        <p className="text-gray-700">Loading authentication…</p>
       </div>
     );
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isIconic, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isIconic, login, logout, refresh }}
+    >
       {children}
     </AuthContext.Provider>
   );

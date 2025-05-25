@@ -1,3 +1,4 @@
+// src/user-photos/user-photo.service.ts
 import {
   BadRequestException,
   ForbiddenException,
@@ -20,17 +21,41 @@ export class UserPhotosService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Retorna todas as fotos do usuário, ordenadas por posição.
+   * Retorna todas as fotos do usuário, ordenadas por posição,
+   * gerando URLs assinadas válidas por 1 hora.
    */
   async findAllByUser(userId: string) {
-    return this.prisma.userPhoto.findMany({
+    const photos = await this.prisma.userPhoto.findMany({
       where: { user_id: userId },
       orderBy: { position: 'asc' },
     });
+
+    return Promise.all(
+      photos.map(async (photo) => {
+        const filename = path.basename(new URL(photo.url).pathname);
+        const filePath = `${userId}/${filename}`;
+        const { data, error } = await this.supabase.storage
+          .from('user-photos')
+          .createSignedUrl(filePath, 60 * 60); // 1 hora em segundos
+
+        if (error || !data.signedUrl) {
+          throw new BadRequestException(
+            'Não foi possível gerar URL assinada para a imagem.',
+          );
+        }
+
+        return {
+          id: photo.id,
+          url: data.signedUrl,
+          position: photo.position,
+        };
+      }),
+    );
   }
 
   /**
-   * Faz upload de uma nova foto, respeitando o limite de 6.
+   * Cria um novo registro de foto (front-end já fez o upload ao Supabase).
+   * Limita a 6 fotos.
    */
   async upload(userId: string, dto: CreateUserPhotoDto) {
     const existing = await this.prisma.userPhoto.findMany({
@@ -58,19 +83,17 @@ export class UserPhotosService {
   }
 
   /**
-   * Atualiza posição ou ordenação de uma foto existente.
+   * Atualiza posição de uma foto existente.
    */
   async update(userId: string, id: string, dto: UpdateUserPhotoDto) {
     const photo = await this.prisma.userPhoto.findUnique({ where: { id } });
-    if (!photo) throw new NotFoundException('Photo not found');
+    if (!photo) throw new NotFoundException('Foto não encontrada.');
     if (photo.user_id !== userId) throw new ForbiddenException();
 
-    if (dto.position && (dto.position < 1 || dto.position > 6)) {
-      throw new BadRequestException('Position must be between 1 and 6');
-    }
-
-    if (dto.position) {
-      // Corrige `user_id` para referenciar o parâmetro `userId`
+    if (dto.position != null) {
+      if (dto.position < 1 || dto.position > 6) {
+        throw new BadRequestException('Position must be between 1 and 6');
+      }
       const conflict = await this.prisma.userPhoto.findFirst({
         where: {
           user_id: userId,
@@ -90,24 +113,22 @@ export class UserPhotosService {
   }
 
   /**
-   * Remove uma foto, exclui do storage e reordena as posições.
+   * Remove a foto tanto do storage quanto do banco e reordena posições.
    */
   async remove(userId: string, id: string) {
     const photo = await this.prisma.userPhoto.findUnique({ where: { id } });
-    if (!photo) throw new NotFoundException('Photo not found');
+    if (!photo) throw new NotFoundException('Foto não encontrada.');
     if (photo.user_id !== userId) throw new ForbiddenException();
 
-    // Remove do Supabase Storage
+    // Deleta do Supabase Storage
     const filename = path.basename(new URL(photo.url).pathname);
-    if (filename) {
-      const filePath = `${userId}/${filename}`;
-      const { error } = await this.supabase.storage
-        .from('user-photos')
-        .remove([filePath]);
-      if (error) {
-        console.error('Erro ao deletar foto do storage:', error);
-        throw error;
-      }
+    const filePath = `${userId}/${filename}`;
+    const { error: removeError } = await this.supabase.storage
+      .from('user-photos')
+      .remove([filePath]);
+    if (removeError) {
+      console.error('Erro ao deletar foto do storage:', removeError);
+      throw removeError;
     }
 
     // Remove do DB

@@ -5,6 +5,10 @@ import { supabase } from "@/supabaseClient";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { UploadCloud, CheckCircle, Circle, X } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css"; // modal styles
 
 interface User {
   id: string;
@@ -32,12 +36,16 @@ export default function Profile() {
   const [phoneCode, setPhoneCode] = useState("1");
   const [phoneNumber, setPhoneNumber] = useState("");
 
+  // ────────────────────────────────────────────────────────────
+  // Fetch profile on mount
+  // ────────────────────────────────────────────────────────────
   useEffect(() => {
     async function fetchProfile() {
       try {
         const { data } = await api.get<User>("/users/me");
         if (data.date_of_birth)
           data.date_of_birth = data.date_of_birth.split("T")[0];
+
         if (data.phone_number) {
           const digits = data.phone_number.replace(/\D/g, "");
           const code =
@@ -46,10 +54,12 @@ export default function Profile() {
           setPhoneNumber(digits.slice(-11));
         }
         setUser(data);
+
         const photosRes = await api.get<UserPhoto[]>("/user-photos");
         setPhotos(photosRes.data);
       } catch (err) {
-        console.error("Error loading profile:", err);
+        console.error(err);
+        toast.error("Failed to load profile.");
       } finally {
         setLoading(false);
       }
@@ -57,12 +67,15 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
+  // ────────────────────────────────────────────────────────────
+  // Handlers
+  // ────────────────────────────────────────────────────────────
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     if (!user) return;
     const { name, value, type, checked } = e.target;
-    setUser({ ...user, [name]: type === "checkbox" ? checked : value });
+    setUser({ ...user, [name]: type === "checkbox" ? checked : value } as User);
   };
 
   const handleSave = async () => {
@@ -79,70 +92,143 @@ export default function Profile() {
       if (user.date_of_birth)
         dto.date_of_birth = new Date(user.date_of_birth).toISOString();
       if (phoneNumber) dto.phone_number = `+${phoneCode}${phoneNumber}`;
+
       await api.patch(`/users/${user.id}`, dto);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated!");
     } catch (error: any) {
-      console.error("Error updating profile:", error.response?.data || error);
-      alert(
-        "Failed to update profile. " + (error.response?.data?.message || "")
+      console.error(error);
+      toast.error(
+        `Update failed: ${error.response?.data?.message || error.message}`
       );
     }
   };
 
+  // ────────────────────────────────────────────────────────────
+  // Helper: validate that we have a real renderable image
+  // ────────────────────────────────────────────────────────────
+  const validateImage = (file: File): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject();
+      };
+      img.src = url;
+    });
+
+  // ────────────────────────────────────────────────────────────
+  // Re-place the previous handlePhotoUpload with the new version
+  // ────────────────────────────────────────────────────────────
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     isProfile = false
   ) => {
     if (!e.target.files || !user) return;
+
     const file = e.target.files[0];
+
+    // 1) File-type validation
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Unsupported image format. Use JPEG, PNG, WEBP or GIF.");
+      return;
+    }
+
+    // 2) Corruption / broken file validation
+    try {
+      await validateImage(file);
+    } catch {
+      toast.error("The image appears to be corrupted or unreadable.");
+      return;
+    }
+
+    // 3) Normal upload flow
     const ext = file.name.split(".").pop();
     const fileName = `${Date.now()}.${ext}`;
     const path = `${user.id}/${fileName}`;
+
     const { error } = await supabase.storage
       .from("user-photos")
       .upload(path, file);
     if (error) {
-      alert("Image upload failed.");
+      toast.error("Image upload failed.");
       return;
     }
-    const { data } = supabase.storage.from("user-photos").getPublicUrl(path);
-    const url = data.publicUrl;
-    if (isProfile) {
-      await api.patch("/users/profile-picture", { url });
-      setUser((u) => u && { ...u, profile_picture_url: url });
-    } else {
-      await api.post("/user-photos", { url });
-      const photosRes = await api.get<UserPhoto[]>("/user-photos");
-      setPhotos(photosRes.data);
-    }
-  };
 
-  const handlePhotoDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this photo?")) return;
     try {
-      await api.delete(`/user-photos/${id}`);
-      setPhotos((p) => p.filter((x) => x.id !== id));
+      const url = supabase.storage.from("user-photos").getPublicUrl(path)
+        .data.publicUrl;
+
+      if (isProfile) {
+        await api.patch("/users/profile-picture", { url });
+        setUser((u) => u && { ...u, profile_picture_url: url });
+        toast.success("Profile picture updated!");
+      } else {
+        await api.post("/user-photos", { url, position: photos.length + 1 });
+        const photosRes = await api.get<UserPhoto[]>("/user-photos");
+        setPhotos(photosRes.data);
+        toast.success("Photo added!");
+      }
     } catch {
-      alert("Failed to delete photo.");
+      toast.error("Server error while saving image.");
     }
   };
 
-  if (loading || !user) return <p className="p-4">Loading profile...</p>;
+  const handlePhotoDelete = (id: string) => {
+    confirmAlert({
+      title: "Delete photo",
+      message: "Are you sure you want to delete this photo?",
+      buttons: [
+        {
+          label: "Yes, delete",
+          onClick: async () => {
+            try {
+              await api.delete(`/user-photos/${id}`);
+              setPhotos((p) => p.filter((x) => x.id !== id));
+              toast.success("Photo removed.");
+            } catch {
+              toast.error("Failed to delete photo.");
+            }
+          },
+        },
+        {
+          label: "Cancel",
+          onClick: () => {},
+        },
+      ],
+    });
+  };
+
+  // ────────────────────────────────────────────────────────────
+  if (loading || !user) return <p className="p-4">Loading profile…</p>;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 pt-16 pb-24">
+      <ToastContainer position="top-right" autoClose={4000} />
       <Header />
+
       <main className="flex-1 overflow-auto p-4 md:p-8 lg:px-16 lg:py-12 max-w-4xl mx-auto space-y-6">
         <h1 className="text-2xl md:text-3xl font-extrabold text-primary">
           My Profile
         </h1>
+
+        {/* Avatar + Form */}
         <div className="flex flex-col md:flex-row md:gap-8">
+          {/* Avatar */}
           <div className="flex-shrink-0 flex flex-col items-center">
             <div className="relative w-32 h-32 md:w-40 md:h-40">
               <img
                 src={user.profile_picture_url || "/avatar_placeholder.png"}
                 alt="Avatar"
-                className="w-full h-full rounded-xl object-cover"
+                className="w-full h-full rounded-xl object-cover bg-gray-200"
+                onError={(e) =>
+                  (e.currentTarget.src = "/avatar_placeholder.png")
+                }
               />
               <label className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow cursor-pointer">
                 <UploadCloud className="w-6 h-6 text-black" />
@@ -155,29 +241,28 @@ export default function Profile() {
               </label>
             </div>
             <span className="mt-2 text-sm text-gray-600">
-              Click icon to update
+              Tap icon to change
             </span>
           </div>
+
+          {/* Form */}
           <div className="flex-1 space-y-4">
             {[
               {
-                label: "Full Name",
+                label: "Full name",
                 name: "full_name",
-                type: "text",
                 value: user.full_name,
-                placeholder: "Enter your full name",
+                placeholder: "John Doe",
               },
               {
                 label: "Nickname",
                 name: "nickname",
-                type: "text",
                 value: user.nickname,
-                placeholder: "What should we call you?",
+                placeholder: "johnny",
               },
               {
                 label: "Instagram",
                 name: "instagram",
-                type: "text",
                 value: user.instagram || "",
                 placeholder: "@yourhandle",
               },
@@ -188,17 +273,18 @@ export default function Profile() {
                 </label>
                 <input
                   name={f.name}
-                  type={f.type}
                   placeholder={f.placeholder}
-                  value={f.value as string}
+                  value={f.value}
                   onChange={handleChange}
                   className="w-full p-3 rounded-xl bg-white outline-none text-gray-900"
                 />
               </div>
             ))}
+
+            {/* Phone */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Phone Number
+                Phone number
               </label>
               <div className="flex gap-2">
                 <input
@@ -223,22 +309,26 @@ export default function Profile() {
                 />
               </div>
             </div>
+
+            {/* Bio */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Bio
               </label>
               <textarea
                 name="bio"
-                placeholder="Tell us something about you..."
+                placeholder="Tell us something about you…"
                 value={user.bio || ""}
                 onChange={handleChange}
                 className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
                 rows={3}
               />
             </div>
+
+            {/* Date of birth */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Date of Birth
+                Date of birth
               </label>
               <input
                 name="date_of_birth"
@@ -248,6 +338,8 @@ export default function Profile() {
                 className="w-full p-3 rounded-xl bg-white text-gray-900 outline-none"
               />
             </div>
+
+            {/* Toggles */}
             <div className="flex flex-col md:flex-row md:gap-4 mt-4">
               <button
                 onClick={() =>
@@ -262,9 +354,10 @@ export default function Profile() {
                   <CheckCircle className="w-5 h-5 text-primary" />
                 ) : (
                   <Circle className="w-5 h-5 text-gray-400" />
-                )}{" "}
+                )}
                 Show profile publicly
               </button>
+
               <button
                 onClick={() =>
                   setUser(
@@ -281,10 +374,11 @@ export default function Profile() {
                   <CheckCircle className="w-5 h-5 text-primary" />
                 ) : (
                   <Circle className="w-5 h-5 text-gray-400" />
-                )}{" "}
+                )}
                 Show in ICONIC network
               </button>
             </div>
+
             <button
               onClick={handleSave}
               className="w-full bg-primary text-white py-3 rounded-xl font-semibold mt-4"
@@ -293,16 +387,22 @@ export default function Profile() {
             </button>
           </div>
         </div>
+
+        {/* Extra photos */}
         <div className="mt-8">
           <h2 className="font-semibold mb-2 text-gray-800">
-            My Photos ({photos.length}/6)
+            My photos ({photos.length}/6)
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {photos.map((p) => (
               <div key={p.id} className="relative h-32">
                 <img
                   src={p.url}
-                  className="w-full h-32 object-cover rounded-xl"
+                  alt="User photo"
+                  className="w-full h-32 object-cover bg-gray-200 rounded-xl"
+                  onError={(e) =>
+                    (e.currentTarget.src = "/avatar_placeholder.png")
+                  }
                 />
                 <button
                   onClick={() => handlePhotoDelete(p.id)}
@@ -312,6 +412,7 @@ export default function Profile() {
                 </button>
               </div>
             ))}
+
             {photos.length < 6 && (
               <label className="cursor-pointer flex items-center justify-center border-2 border-dashed rounded-xl h-32 bg-white text-gray-500">
                 + Add
@@ -326,6 +427,7 @@ export default function Profile() {
           </div>
         </div>
       </main>
+
       <BottomNav />
     </div>
   );

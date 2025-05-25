@@ -58,12 +58,23 @@ export class UsersService {
     return this.prisma.user.findMany();
   }
 
+  /**
+   * Atualiza dados do usuário. Lança NotFoundException se o ID não existir.
+   */
   async update(id: string, dto: UpdateUserDto) {
     const data: any = { ...dto };
     if (dto.date_of_birth) {
       data.date_of_birth = new Date(dto.date_of_birth);
     }
-    return this.prisma.user.update({ where: { id }, data });
+    try {
+      return await this.prisma.user.update({ where: { id }, data });
+    } catch (err: any) {
+      // Prisma P2025 = registro não encontrado
+      if (err.code === 'P2025') {
+        throw new NotFoundException('Usuário não encontrado.');
+      }
+      throw err;
+    }
   }
 
   async remove(id: string) {
@@ -82,7 +93,9 @@ export class UsersService {
       if (error) throw error;
     }
     await this.prisma.userPhoto.deleteMany({ where: { user_id: id } });
-    await this.prisma.eventParticipation.deleteMany({ where: { user_id: id } });
+    await this.prisma.eventParticipation.deleteMany({
+      where: { user_id: id },
+    });
     return this.prisma.user.delete({ where: { id } });
   }
 
@@ -121,7 +134,6 @@ export class UsersService {
         iconic_expires_at: { gt: new Date() },
       },
     });
-    // Shuffle for random order
     return users.sort(() => Math.random() - 0.5);
   }
 
@@ -135,6 +147,9 @@ export class UsersService {
     return users.sort(() => Math.random() - 0.5);
   }
 
+  /**
+   * Retorna perfil público (com fotos) respeitando visibilidade.
+   */
   async getPublicProfileWithPhotos(
     userId: string,
     requesterId: string | null = null,
@@ -161,27 +176,16 @@ export class UsersService {
         throw new ForbiddenException('Private profile');
       }
     }
-    const {
-      id,
-      full_name,
-      nickname,
-      bio,
-      instagram,
-      profile_picture_url,
-      is_iconic,
-      photos,
-      date_of_birth,
-    } = user;
     return {
-      id,
-      full_name,
-      nickname,
-      bio,
-      instagram,
-      profile_picture_url,
-      is_iconic,
-      photos,
-      date_of_birth,
+      id: user.id,
+      full_name: user.full_name,
+      nickname: user.nickname,
+      bio: user.bio,
+      instagram: user.instagram,
+      profile_picture_url: user.profile_picture_url,
+      is_iconic: user.is_iconic,
+      date_of_birth: user.date_of_birth,
+      photos: user.photos,
     };
   }
 
