@@ -1,10 +1,9 @@
-// src/pages/EventDetail.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Calendar, Clock, MapPin, QrCode, Camera } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWallet, ConnectButton } from "@suiet/wallet-kit";
+import { useWallet } from "@suiet/wallet-kit";
 import { usePaywall } from "@/lib/sui";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
@@ -175,6 +174,13 @@ export default function EventDetail() {
     }
   };
 
+  // New “Bippar” handler
+  const handleBip = () => {
+    if (event) {
+      navigate(`/events/${event.id}/bip`);
+    }
+  };
+
   if (loading || !event) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -195,7 +201,8 @@ export default function EventDetail() {
     minute: "2-digit",
   });
   const role = user?.role.toLowerCase() ?? "";
-  const canScan = role === "admin" || role === "scanner";
+  const canScan = ["admin", "scanner"].includes(role);
+  const canBip = ["admin", "bipper"].includes(role);
   const seatsLeft = event.max_attendees - event.current_attendees;
   const soldOut = seatsLeft <= 0;
 
@@ -296,6 +303,14 @@ export default function EventDetail() {
                       className="w-full flex items-center justify-center bg-white border-2 border-primary text-primary font-semibold py-3 rounded-full shadow transition hover:bg-primary/10"
                     >
                       <Camera className="w-5 h-5 mr-2" /> Scanner Mode
+                    </button>
+                  )}
+                  {canBip && (
+                    <button
+                      onClick={handleBip}
+                      className="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-3 rounded-full shadow transition hover:brightness-110"
+                    >
+                      Bippar
                     </button>
                   )}
                   {!checkedIn && (
