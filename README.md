@@ -37,7 +37,7 @@
 
 ## 🌟 Overview
 
-ICONIC is a revolutionary platform that is redefining the media and entertainment experience through Sui blockchain technology. Our platform transforms personal desires into memorable experiences by connecting content creators directly with users through transparent, secure interactions.
+ICONIC is a revolutionary platform that is redefining the media and entertainment experience through Sui blockchain technology. Our platform transforms personal desires into memorable experiences by connecting event creators directly with users through transparent, secure interactions.
 
 We're participating in the **Sui Overflow 2025** hackathon in the **Media and Entertainment** track, with the goal of securing incubation to expand our impact in the global market.
 
@@ -45,7 +45,7 @@ We're participating in the **Sui Overflow 2025** hackathon in the **Media and En
 
 ICONIC operates on a multi-sided platform business model that creates value for both content creators and users:
 
-### For Content Creators:
+### For Event Creators:
 - **Direct Monetization**: Eliminate intermediaries and receive 90% of revenue
 - **Authentic Connection**: Build genuine relationships with fans and followers
 - **Creative Tools**: Access to tools for creating personalized experiences
