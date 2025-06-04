@@ -1,4 +1,13 @@
-import { IsString, IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsUrl, Length } from 'class-validator';
+// create-event.dto.ts
+import {
+  IsString,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsUrl,
+  Length,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EventCategory } from '@prisma/client';
 
@@ -18,11 +27,11 @@ export class CreateEventDto {
   location: string;
 
   @ApiProperty({ example: '2025-07-15' })
-  @IsDateString()
+  @IsString() // Alterado para @IsString()
   date: string;
 
   @ApiProperty({ example: '18:30' })
-  @IsDateString()
+  @IsString() // Alterado para @IsString()
   time: string;
 
   @ApiProperty({ example: 'party', enum: EventCategory })
@@ -46,12 +55,16 @@ export class CreateEventDto {
   @IsString()
   partner_name?: string;
 
-  @ApiPropertyOptional({ example: 'https://storage.supabase.com/logos/supreme.png' })
+  @ApiPropertyOptional({
+    example: 'https://storage.supabase.com/logos/supreme.png',
+  })
   @IsOptional()
   @IsUrl()
   partner_logo_url?: string;
 
-  @ApiProperty({ example: 'https://storage.supabase.com/events/banner-drop123.jpg' })
+  @ApiProperty({
+    example: 'https://storage.supabase.com/events/banner-drop123.jpg',
+  })
   @IsUrl()
   cover_image_url: string;
 }
