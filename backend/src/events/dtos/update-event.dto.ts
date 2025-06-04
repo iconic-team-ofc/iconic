@@ -1,3 +1,4 @@
+// update-event.dto.ts
 import { PartialType, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateEventDto } from './create-event.dto';
 import {
@@ -6,7 +7,6 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
-  IsDateString,
   IsUrl,
   Length,
 } from 'class-validator';
@@ -19,7 +19,9 @@ export class UpdateEventDto extends PartialType(CreateEventDto) {
   @Length(3, 120)
   title?: string;
 
-  @ApiPropertyOptional({ example: 'O evento mais aguardado da temporada ICONIC.' })
+  @ApiPropertyOptional({
+    example: 'O evento mais aguardado da temporada ICONIC.',
+  })
   @IsOptional()
   @IsString()
   description?: string;
@@ -31,12 +33,12 @@ export class UpdateEventDto extends PartialType(CreateEventDto) {
 
   @ApiPropertyOptional({ example: '2025-07-15' }) // <--- STRING!
   @IsOptional()
-  @IsDateString()
+  @IsString()
   date?: string;
 
   @ApiPropertyOptional({ example: '18:30' }) // <--- STRING!
   @IsOptional()
-  @IsDateString()
+  @IsString()
   time?: string;
 
   @ApiPropertyOptional({ example: 'party', enum: EventCategory })
@@ -64,12 +66,16 @@ export class UpdateEventDto extends PartialType(CreateEventDto) {
   @IsString()
   partner_name?: string;
 
-  @ApiPropertyOptional({ example: 'https://storage.supabase.com/logos/supreme.png' })
+  @ApiPropertyOptional({
+    example: 'https://storage.supabase.com/logos/supreme.png',
+  })
   @IsOptional()
   @IsUrl()
   partner_logo_url?: string;
 
-  @ApiPropertyOptional({ example: 'https://storage.supabase.com/events/event123.png' })
+  @ApiPropertyOptional({
+    example: 'https://storage.supabase.com/events/event123.png',
+  })
   @IsOptional()
   @IsUrl()
   cover_image_url?: string;

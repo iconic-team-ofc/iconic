@@ -11,37 +11,41 @@ import { UpdateEventDto } from './dtos/update-event.dto';
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Criar novo evento
   async create(dto: CreateEventDto) {
     let dt: Date;
 
-    // Se `dto.date` já vier no formato ISO completo, usa diretamente
+    // Verifica se a data já inclui hora (formato ISO)
     if (dto.date.includes('T')) {
-      dt = new Date(dto.date);
+      dt = new Date(dto.date); // Se data já inclui hora, usa diretamente
     } else {
-      // Senão combina date + time
+      // Caso contrário, combina a data com o horário fornecido
       if (!dto.time) {
         throw new BadRequestException(
-          '`time` is required when `date` is not full ISO string',
+          '`time` is required when `date` is not a full ISO string',
         );
       }
+
       const [h, m] = dto.time.split(':').map(Number);
-      dt = new Date(dto.date);
-      dt.setHours(h, m, 0, 0);
+      dt = new Date(dto.date); // Usa apenas a data
+      dt.setHours(h, m, 0, 0); // Ajusta hora e minuto conforme `time`
+
+      // Verifica se a data gerada é válida
+      if (isNaN(dt.getTime())) {
+        throw new BadRequestException(
+          `Invalid date/time: ${dto.date} / ${dto.time}`,
+        );
+      }
     }
 
-    if (isNaN(dt.getTime())) {
-      throw new BadRequestException(
-        `Invalid date/time: ${dto.date} / ${dto.time}`,
-      );
-    }
-
+    // Cria o evento no banco de dados
     return this.prisma.event.create({
       data: {
         title: dto.title,
         description: dto.description,
         location: dto.location,
-        date: dt,
-        time: dt,
+        date: dt, // Salva a data completa
+        time: dt, // Salva a hora combinada
         category: dto.category,
         is_exclusive: dto.is_exclusive,
         is_public: dto.is_public,
@@ -54,32 +58,37 @@ export class EventsService {
     });
   }
 
+  // Encontrar eventos públicos
   async findAllPublic() {
     return this.prisma.event.findMany({ where: { is_public: true } });
   }
 
+  // Encontrar eventos exclusivos
   async findAllExclusive() {
     return this.prisma.event.findMany({ where: { is_exclusive: true } });
   }
 
+  // Encontrar evento por ID
   async findById(id: string) {
     return this.prisma.event.findUnique({ where: { id } });
   }
 
+  // Atualizar evento existente
   async update(id: string, dto: UpdateEventDto) {
     const data: any = { ...dto };
 
+    // Se data e hora estiverem presentes, combina elas
     if (dto.date && dto.time) {
       const [h, m] = dto.time.split(':').map(Number);
-      const dt = new Date(dto.date);
-      dt.setHours(h, m, 0, 0);
+      const dt = new Date(dto.date); // Data do evento
+      dt.setHours(h, m, 0, 0); // Ajusta hora e minutos
       if (isNaN(dt.getTime())) {
         throw new BadRequestException(
           `Invalid date/time: ${dto.date} / ${dto.time}`,
         );
       }
       data.date = dt;
-      data.time = dt;
+      data.time = dt; // Atualiza também o campo `time` com a data ajustada
     }
 
     return this.prisma.event.update({
@@ -88,10 +97,12 @@ export class EventsService {
     });
   }
 
+  // Remover evento
   async remove(id: string) {
     return this.prisma.event.delete({ where: { id } });
   }
 
+  // Encontrar evento com participação
   async findByIdWithParticipation(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -114,15 +125,17 @@ export class EventsService {
     };
   }
 
+  // Encontrar eventos recomendados para o usuário
   async findRecommendedForUser(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
-    // Iconic vê tudo, users só vêem eventos públicos
+    // Iconic vê tudo, usuários normais só veem eventos públicos
     const where = user.is_iconic ? {} : { is_public: true };
     return this.prisma.event.findMany({ where });
   }
 
+  // Encontrar eventos recomendados com participação
   async findRecommendedWithParticipation(userId: string) {
     const events = await this.findRecommendedForUser(userId);
 
@@ -144,6 +157,7 @@ export class EventsService {
     }));
   }
 
+  // Encontrar eventos em que o usuário está participando
   async findParticipating(userId: string) {
     const participations = await this.prisma.eventParticipation.findMany({
       where: { user_id: userId, status: 'confirmed' },
