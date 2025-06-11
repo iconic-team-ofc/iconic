@@ -32,14 +32,14 @@ interface EventDetail {
 }
 
 export default function EventDetail() {
-  /* ---------- contextos ---------- */
+  /* ---------- contexts ---------- */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isIconic, token } = useAuth();
   const { connected, connect } = useWallet();
   const { payFee } = usePaywall();
 
-  /* ---------- estado ---------- */
+  /* ---------- state ---------- */
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
