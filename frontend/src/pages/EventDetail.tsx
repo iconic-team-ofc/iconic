@@ -19,8 +19,8 @@ interface EventDetail {
   title: string;
   description: string;
   location: string;
-  date: string;
-  time: string;
+  date: string; // ISO início
+  end_time?: string; // ISO fim opcional
   is_exclusive: boolean;
   cover_image_url: string;
   partner_name?: string;
@@ -32,21 +32,22 @@ interface EventDetail {
 }
 
 export default function EventDetail() {
+  /* ---------- contexts ---------- */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isIconic, token } = useAuth();
   const { connected, connect } = useWallet();
   const { payFee } = usePaywall();
 
+  /* ---------- state ---------- */
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
-
   const [becomeOpen, setBecomeOpen] = useState(false);
   const [becomeWaiting, setBecomeWaiting] = useState(false);
 
-  // Load event details
+  /* ---------- carregar ---------- */
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -61,7 +62,7 @@ export default function EventDetail() {
     })();
   }, [id]);
 
-  // Load check-in status
+  /* ---------- check‑in ---------- */
   useEffect(() => {
     if (!event || !user) return;
     (async () => {
@@ -70,13 +71,11 @@ export default function EventDetail() {
           `/api/event-checkins/event/${id}/user/${user.id}/checked`
         );
         setCheckedIn(data.checkedIn);
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
   }, [event, id, user]);
 
-  // RSVP handler
+  /* ---------- RSVP ---------- */
   const handleJoin = async () => {
     if (!event || processing) return;
     if (event.is_exclusive && !isIconic) {
@@ -86,7 +85,7 @@ export default function EventDetail() {
     setProcessing(true);
     try {
       const { data } = await api.post<{ id: string }>(
-        `/api/event-participations`,
+        "/api/event-participations",
         {
           event_id: event.id,
           status: "confirmed",
@@ -104,17 +103,14 @@ export default function EventDetail() {
       );
       toast.success("Registration confirmed!");
     } catch (err: any) {
-      if (err.response?.status === 409) {
-        toast.info("You're already registered.");
-      } else {
-        toast.error("Failed to register. Please try again.");
-      }
+      err.response?.status === 409
+        ? toast.info("You're already registered.")
+        : toast.error("Failed to register. Please try again.");
     } finally {
       setProcessing(false);
     }
   };
 
-  // Cancel RSVP
   const handleCancel = async () => {
     if (!event?.participation_id || processing) return;
     setProcessing(true);
@@ -141,7 +137,7 @@ export default function EventDetail() {
     }
   };
 
-  // Become ICONIC handler
+  /* ---------- tornar‑se ICONIC ---------- */
   const handleBecome = async () => {
     if (!connected) {
       await connect();
@@ -161,13 +157,9 @@ export default function EventDetail() {
           },
         }
       );
-      if (res.status === 200) {
-        toast.success("You are now ICONIC!");
-        setBecomeOpen(false);
-        // TODO: Idealmente, atualizar o estado global do usuário (isIconic) aqui
-      } else {
-        toast.error("Subscription failed.");
-      }
+      res.status === 200
+        ? (toast.success("You are now ICONIC!"), setBecomeOpen(false))
+        : toast.error("Subscription failed.");
     } catch {
       toast.error("Subscription error. Please try again.");
     } finally {
@@ -175,14 +167,27 @@ export default function EventDetail() {
     }
   };
 
-  // Handler para acessar o scanner (unificado)
-  const handleAccessScanner = () => {
-    if (event) {
-      // Navega para a rota de scan, que agora também é usada por 'bip'
-      navigate(`/events/${event.id}/scan`);
+  /* ---------- open maps ---------- */
+  const handleOpenMaps = () => {
+    const query = encodeURIComponent(event!.location);
+    const google = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: event!.title,
+          text: event!.location,
+          url: google,
+        })
+        .catch(() => window.open(google, "_blank"));
+    } else {
+      window.open(google, "_blank");
     }
   };
 
+  const handleAccessScanner = () =>
+    event && navigate(`/events/${event.id}/scan`);
+
+  /* ---------- carregando ---------- */
   if (loading || !event) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -192,150 +197,180 @@ export default function EventDetail() {
     );
   }
 
-  const dt = new Date(event.date);
-  const dateStr = dt.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-  const timeStr = dt.toLocaleTimeString("en-US", {
+  /* ---------- helpers ---------- */
+  const start = new Date(event.date);
+  let weekday = start.toLocaleDateString("pt-BR", { weekday: "long" });
+  weekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const dateLabel = `${weekday}, ${start.getDate()} de ${start.toLocaleDateString(
+    "pt-BR",
+    {
+      month: "long",
+    }
+  )}`;
+
+  const timeStart = start.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const role = user?.role.toLowerCase() ?? "";
-  // Verifica se o usuário tem *qualquer* permissão para acessar o scanner
-  const canAccessScanner = ["admin", "scanner", "bipper"].includes(role);
+  const timeEnd =
+    event.end_time &&
+    new Date(event.end_time).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   const seatsLeft = event.max_attendees - event.current_attendees;
   const soldOut = seatsLeft <= 0;
+  const role = user?.role.toLowerCase() ?? "";
+  const canAccessScanner = ["admin", "scanner", "bipper"].includes(role);
 
+  const gradientBox =
+    "flex-none flex items-center justify-center w-10 h-10 rounded-md bg-gradient-to-r from-purple-600 to-pink-500 text-white animate-gradient-pan";
+
+  /* ---------- UI ---------- */
   return (
     <>
       <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900">
         <Header />
-        <main className="flex-1 overflow-auto pb-24">
-          <div className="relative">
-            <img
-              src={event.cover_image_url}
-              onError={(e) => (e.currentTarget.src = placeholderEvent)}
-              alt={event.title}
-              className="w-full h-72 md:h-96 object-cover"
-            />
-            {soldOut ? (
-              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 text-sm font-semibold rounded animate-pulse">
-                Sold Out
-              </div>
-            ) : (
-              <div className="absolute top-4 left-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-3 py-1 text-sm font-semibold rounded animate-gradient-pan">
-                {seatsLeft} seats left
-              </div>
-            )}
-            {checkedIn && (
-              <div className="absolute top-4 right-4 bg-white bg-opacity-80 text-gray-900 px-3 py-1 text-sm font-medium uppercase rounded">
-                Access Granted
-              </div>
-            )}
-          </div>
 
-          <div className="px-4 md:px-8 lg:px-16 pt-6 space-y-6 md:max-w-3xl md:mx-auto">
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-primary">
-              {event.title}
-            </h1>
-            {event.partner_logo_url && (
-              <div className="flex items-center space-x-3 justify-center">
-                <img
-                  src={event.partner_logo_url}
-                  onError={(e) => (e.currentTarget.src = placeholderEvent)}
-                  alt={event.partner_name}
-                  className="w-10 h-10 rounded-full"
-                />
-                <span className="text-sm text-gray-600">
-                  Partner: {event.partner_name}
-                </span>
-              </div>
-            )}
-            <p className="text-lg text-gray-700 text-center">
-              {event.description}
-            </p>
-
-            <div className="flex flex-wrap gap-6 text-gray-500 justify-center">
-              <span className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" /> {dateStr}
-              </span>
-              <span className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" /> {timeStr}
-              </span>
-              <span className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" /> {event.location}
-              </span>
-            </div>
-
-            <div className="text-center text-sm font-medium text-gray-600">
+        <main className="flex-1 overflow-auto pt-20 md:pt-28 pb-24">
+          <div className="mx-auto w-full max-w-3xl px-4 md:px-6 lg:px-8 space-y-6">
+            {/* HERO */}
+            <div className="relative w-full h-40 md:h-52 lg:h-60 rounded-3xl overflow-hidden">
+              <img
+                src={event.cover_image_url}
+                onError={(e) => (e.currentTarget.src = placeholderEvent)}
+                alt={event.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
               {soldOut ? (
-                <span className="text-red-600">This event is sold out.</span>
+                <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 text-sm font-semibold rounded animate-pulse">
+                  Sold Out
+                </div>
               ) : (
-                <span>
-                  Only <span className="font-semibold">{seatsLeft}</span> seats
-                  remaining
-                </span>
+                <div className="absolute top-4 left-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-3 py-1 text-sm font-semibold rounded animate-gradient-pan">
+                  {seatsLeft} seats left
+                </div>
               )}
-            </div>
-
-            {/* Lógica dos botões unificada */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {!event.is_participating && !soldOut ? (
-                // Botão de RSVP
-                <button
-                  onClick={handleJoin}
-                  disabled={processing}
-                  className="w-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white font-bold py-3 rounded-full shadow-lg transition hover:brightness-110 disabled:opacity-50 md:col-span-2"
-                >
-                  {processing ? "Joining..." : "RSVP Now"}
-                </button>
-              ) : event.is_participating ? (
-                // Botões para quem está participando
-                <>
-                  {!checkedIn && (
-                    // Botão QR Code se ainda não fez check-in
-                    <button
-                      onClick={() => navigate(`/events/${event.id}/checkin`)}
-                      className="w-full flex items-center justify-center bg-gradient-to-r from-yellow-500 to-red-500 text-white font-semibold py-3 rounded-full shadow transition hover:brightness-110"
-                    >
-                      <QrCode className="w-5 h-5 mr-2" /> Get Access QR
-                    </button>
-                  )}
-                  {canAccessScanner && (
-                    // Botão UNIFICADO para acessar scanner (scan/bip)
-                    <button
-                      onClick={handleAccessScanner}
-                      className="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-3 rounded-full shadow transition hover:brightness-110"
-                    >
-                      <Camera className="w-5 h-5 mr-2" /> Access Scanner
-                    </button>
-                  )}
-                  {!checkedIn && (
-                    // Botão Cancelar RSVP se ainda não fez check-in
-                    <button
-                      onClick={handleCancel}
-                      disabled={processing}
-                      className="w-full text-center text-sm text-gray-500 underline disabled:opacity-50 md:col-span-2"
-                    >
-                      {processing ? "Cancelling..." : "Cancel RSVP"}
-                    </button>
-                  )}
-                </>
-              ) : (
-                // Mensagem de Esgotado
-                <div className="md:col-span-2 text-center py-3">
-                  <span className="text-red-600 font-semibold">Sold Out</span>
+              {checkedIn && (
+                <div className="absolute top-4 right-4 bg-white/90 text-gray-900 px-3 py-1 text-sm font-medium uppercase rounded">
+                  Access Granted
                 </div>
               )}
             </div>
 
-            {/* Lista de participantes com check-in */}
+            {/* CARD */}
+            <div className="bg-white rounded-3xl shadow-xl p-6 md:p-10 space-y-6">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-primary text-left">
+                {event.title}
+              </h1>
+
+              {event.partner_logo_url && (
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={event.partner_logo_url}
+                    onError={(e) => (e.currentTarget.src = placeholderEvent)}
+                    alt={event.partner_name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <span className="text-sm text-gray-600">
+                    Partner: {event.partner_name}
+                  </span>
+                </div>
+              )}
+
+              <p className="text-lg text-gray-700 text-left">
+                {event.description}
+              </p>
+
+              {/* ------------ META ------------ */}
+              <div className="space-y-4">
+                {/* Data & hora */}
+                <div className="flex items-start gap-4">
+                  <div className={gradientBox}>
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{dateLabel}</span>
+                    <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <Clock className="w-4 h-4 text-primary" />
+                      {timeStart}
+                      {timeEnd && ` – ${timeEnd}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Local */}
+                <div className="flex items-start gap-4">
+                  <div className={gradientBox}>
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <button
+                    onClick={handleOpenMaps}
+                    className="text-left font-medium break-words cursor-pointer hover:text-primary focus:outline-none"
+                  >
+                    {event.location}
+                  </button>
+                </div>
+              </div>
+
+              {/* ---------- AÇÕES ---------- */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {!event.is_participating && !soldOut && (
+                  <button
+                    onClick={handleJoin}
+                    disabled={processing}
+                    className="w-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white font-bold py-3 rounded-full shadow-lg transition hover:brightness-110 disabled:opacity-50 md:col-span-2"
+                  >
+                    {processing ? "Joining..." : "RSVP Now"}
+                  </button>
+                )}
+
+                {event.is_participating && (
+                  <>
+                    {!checkedIn && (
+                      <button
+                        onClick={() => navigate(`/events/${event.id}/checkin`)}
+                        className="w-full flex items-center justify-center bg-gradient-to-r from-yellow-500 to-red-500 text-white font-semibold py-3 rounded-full transition hover:brightness-110"
+                      >
+                        <QrCode className="w-5 h-5 mr-2" /> Get Access QR
+                      </button>
+                    )}
+
+                    {canAccessScanner && (
+                      <button
+                        onClick={handleAccessScanner}
+                        className="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-3 rounded-full transition hover:brightness-110"
+                      >
+                        <Camera className="w-5 h-5 mr-2" /> Access Scanner
+                      </button>
+                    )}
+
+                    {!checkedIn && (
+                      <button
+                        onClick={handleCancel}
+                        disabled={processing}
+                        className="w-full text-left text-sm text-gray-500 underline disabled:opacity-50 md:col-span-2"
+                      >
+                        {processing ? "Cancelling..." : "Cancel RSVP"}
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {soldOut && !event.is_participating && (
+                  <div className="md:col-span-2 text-left py-3">
+                    <span className="text-red-600 font-semibold">Sold Out</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CONFIRMADOS */}
             {event.is_participating && (
-              <section className="mt-8">
-                <h2 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
-                  Confirmed Attendees
+              <section className="pt-8 pb-12">
+                <h2 className="text-2xl font-semibold text-gray-800 mb-4 text-left">
+                  Confirmed Attendees
                 </h2>
                 <UserGrid
                   endpoint={`/event-participations/event/${event.id}/confirmed-users`}
@@ -344,10 +379,11 @@ export default function EventDetail() {
             )}
           </div>
         </main>
+
         <BottomNav />
       </div>
 
-      {/* Become ICONIC Modal */}
+      {/* MODAL Become ICONIC */}
       <Modal open={becomeOpen} onClose={() => setBecomeOpen(false)}>
         <BecomeIconicCard
           connected={connected}
@@ -355,12 +391,13 @@ export default function EventDetail() {
           waiting={becomeWaiting}
           onSubscribe={handleBecome}
           feeAmount={0.1}
-          networkName="Sui Testnet"
+          networkName="Sui Testnet"
         />
       </Modal>
 
       <ToastContainer position="top-center" autoClose={4000} />
 
+      {/* animação gradient */}
       <style>{`
         @keyframes gradient-pan {
           0%,100% { background-position:0% 50%; }
